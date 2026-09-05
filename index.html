@@ -199,30 +199,43 @@
   }
   @keyframes girar { to { transform: rotate(360deg); } }
 
-  /* barra de carregamento global (topo da página) */
+  /* carregamento global bloqueante: evita cliques concorrentes enquanto a API responde */
   #barra-carregamento {
     position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    height: 3px;
-    z-index: 200;
-    background: transparent;
-    overflow: hidden;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(255,255,255,.72);
+    backdrop-filter: blur(2px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
     opacity: 0;
-    transition: opacity 0.2s ease;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .16s ease, visibility .16s ease;
   }
-  #barra-carregamento.ativa { opacity: 1; }
+  #barra-carregamento.ativa {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: all;
+  }
   #barra-carregamento::before {
     content: '';
-    display: block;
-    height: 100%;
-    width: 40%;
-    background: var(--fpbf-primary);
-    animation: deslizar 1.1s ease-in-out infinite;
+    width: 42px;
+    height: 42px;
+    border: 4px solid rgba(139,30,45,.18);
+    border-top-color: var(--fpbf-primary);
+    border-radius: 50%;
+    animation: girar .75s linear infinite;
   }
-  @keyframes deslizar {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(350%); }
+  #barra-carregamento::after {
+    content: 'Carregando...';
+    color: var(--fpbf-primary);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .02em;
   }
 
   .stats-card {
@@ -870,7 +883,7 @@
           <h2>Atribuir trabalhos</h2>
           <p style="font-size:13px; color:var(--fpbf-muted); margin-top:-8px; margin-bottom:16px;">Selecione vários trabalhos livres e atribua todos ao mesmo avaliador. Trabalhos já atribuídos aparecem em cinza e não podem ser selecionados quando o modo de avaliador único estiver ativo.</p>
           <div class="atribuicoes-toolbar">
-            <select id="atrib-lote-avaliador"><option value="">Selecione o avaliador...</option></select>
+            <select id="atrib-lote-avaliador" onchange="renderizarListaAtribuicoesPorAvaliador()"><option value="">Selecione o avaliador...</option></select>
             <button type="button" class="btn btn-secundario" style="width:auto;" onclick="selecionarTodosLivres()">Selecionar livres</button>
             <button type="button" class="btn btn-primary" style="width:auto;" id="btn-atribuir-lote" onclick="atribuirSelecionadosUI()">Atribuir selecionados</button>
             <span class="contador-selecao" id="contador-atribuicoes">0 selecionados</span>
@@ -1022,7 +1035,7 @@
 // =============================================================
 
 // Cole aqui a URL do deploy (.../exec) do Code_Admin.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbx-AmK09XNKAiA2QbCqykjq_0EwxQtyPrDoe4OyqTCDAElfIh8t28ZWXFFb9BuaD_G8hA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwPmNK2_F3tRxUnCcQiSScTZ-3j4kyABPBB9vj9ofaC9KSID83riwtTUl25fzDEblOyrw/exec';
 
 const CHAVE_SESSAO = 'fpbf_avalia_sessao';
 const CHAVE_CACHE = 'fpbf_avalia_cache_v3';
@@ -1377,6 +1390,12 @@ function carregarCacheLocal() {
   } catch (e) {}
 }
 
+function invalidarCacheDados() {
+  // Invalida somente o cache persistente de submissões. O estado atual permanece
+  // visível até a atualização autoritativa terminar, evitando tela piscando.
+  try { localStorage.removeItem(CHAVE_CACHE); } catch (e) {}
+}
+
 function aplicarFiltrosLocais() {
   const busca = document.getElementById('filtro-busca').value.trim().toLowerCase();
   const eixo = document.getElementById('filtro-eixo').value;
@@ -1666,7 +1685,7 @@ if (ehComissao || estouAtribuido) {
       </div>
       <div class="campo">
         <label>Parecer da comissão</label>
-        <textarea id="textarea-parecer" placeholder="Escreva aqui o parecer que poderá ser apresentado ao autor...">${escapeHtml(parecerInicial)}</textarea>
+        <textarea id="textarea-parecer" data-parecer-original="${escapeHtml(parecerInicial)}" placeholder="Escreva aqui o parecer que poderá ser apresentado ao autor...">${escapeHtml(parecerInicial)}</textarea>
       </div>
       ${ehComissao
         ? `<button class="btn btn-primary" style="width:auto;" onclick="publicarResultadoUI('${d.eixo}','${d.codigo}')">${textoBotao}</button>`
@@ -1683,19 +1702,56 @@ document.getElementById('painel-corpo').innerHTML = html;
 }
 
 
+function normalizarEixosAvaliador(valor) {
+  if (Array.isArray(valor)) return valor.map(v => String(v).trim()).filter(Boolean);
+  const texto = String(valor || '').trim();
+  if (!texto) return [];
+  if (texto.toLowerCase() === 'todos') return ['Todos'];
+  return texto.split(',').map(v => v.trim()).filter(Boolean);
+}
+
 function renderizarAtribuicoes() {
   if (!STATE.usuario || STATE.usuario.papel !== 'Comissão') return;
-  const lista = document.getElementById('lista-atribuicoes');
   const sel = document.getElementById('atrib-lote-avaliador');
-  if (!lista || !sel) return;
+  if (!sel) return;
 
+  const valorAtual = sel.value;
   const avaliadores = (STATE.avaliadoresCache || []).filter(u => u.papel === 'Avaliador' && u.ativo);
   sel.innerHTML = '<option value="">Selecione o avaliador...</option>' + avaliadores.map(u =>
     `<option value="${escapeHtml(u.email)}">${escapeHtml(u.nome)} — ${escapeHtml(u.email)}</option>`
   ).join('');
+  if (avaliadores.some(u => u.email === valorAtual)) sel.value = valorAtual;
+
+  renderizarListaAtribuicoesPorAvaliador();
+}
+
+function renderizarListaAtribuicoesPorAvaliador() {
+  const lista = document.getElementById('lista-atribuicoes');
+  const sel = document.getElementById('atrib-lote-avaliador');
+  if (!lista || !sel) return;
+
+  const email = String(sel.value || '').trim().toLowerCase();
+  if (!email) {
+    lista.innerHTML = '<div class="estado-vazio">Selecione primeiro um avaliador para ver apenas os trabalhos dos eixos dele.</div>';
+    atualizarContadorAtribuicoes();
+    return;
+  }
+
+  const avaliador = (STATE.avaliadoresCache || []).find(u => String(u.email || '').trim().toLowerCase() === email);
+  if (!avaliador) {
+    lista.innerHTML = '<div class="estado-vazio">Avaliador não encontrado.</div>';
+    atualizarContadorAtribuicoes();
+    return;
+  }
+
+  const eixosAvaliador = normalizarEixosAvaliador(avaliador.eixos);
+  const todosEixos = eixosAvaliador.some(e => String(e).toLowerCase() === 'todos');
+  const trabalhosCompativeis = (STATE.submissoesCache || []).filter(s =>
+    todosEixos || eixosAvaliador.includes(String(s.eixo || '').trim())
+  );
 
   const multiplos = STATE.fluxo && STATE.fluxo.permitirMultiplosAvaliadores === 'true';
-  lista.innerHTML = (STATE.submissoesCache || []).map((s, i) => {
+  lista.innerHTML = trabalhosCompativeis.map(s => {
     const ja = s.atribuidoPara && s.atribuidoPara.length > 0;
     const bloqueado = ja && !multiplos;
     return `<label class="atribuicao-item ${bloqueado ? 'ja-atribuido' : ''}">
@@ -1703,7 +1759,7 @@ function renderizarAtribuicoes() {
       <div><strong>${escapeHtml(s.codigo)} — ${escapeHtml(s.titulo)}</strong><div class="meta">${escapeHtml(s.eixo)} · ${escapeHtml(s.modalidade)} · ${escapeHtml(s.status)}</div></div>
       <div style="font-size:12px; text-align:right;">${ja ? 'Já atribuído: ' + s.atribuidoPara.map(escapeHtml).join(', ') : '<span style="color:var(--fpbf-success);">Livre</span>'}</div>
     </label>`;
-  }).join('') || '<div class="estado-vazio">Nenhum trabalho disponível.</div>';
+  }).join('') || '<div class="estado-vazio">Nenhum trabalho disponível nos eixos deste avaliador.</div>';
   atualizarContadorAtribuicoes();
 }
 
@@ -1774,7 +1830,8 @@ async function publicarResultadoUI(eixo, codigo) {
     mostrarModalSite('Resultado liberado', 'O status foi publicado e o e-mail correspondente foi enviado ao autor.');
     fecharPainel();
     invalidarCacheDados();
-    carregarSubmissoes();
+    await carregarSubmissoes();
+    aplicarFiltrosLocais();
   } catch (erro) { mostrarModalSite('Não foi possível liberar', erro.message); }
 }
 
@@ -1831,9 +1888,18 @@ async function salvarAvaliacaoUI(eixo, codigo) {
   const parecerEl = document.getElementById('textarea-parecer');
   const novoStatus = statusEl ? statusEl.value : '';
   const parecer = parecerEl ? parecerEl.value.trim() : '';
+  const parecerOriginal = parecerEl ? String(parecerEl.dataset.parecerOriginal || '').trim() : '';
 
   if (!novoStatus) {
     return mostrarModalSite('Selecione o resultado', 'Escolha o status recomendado para concluir sua avaliação.');
+  }
+
+  if (parecer === parecerOriginal) {
+    const continuarSemAlterar = await confirmarModalSite(
+      'Parecer não foi alterado',
+      'Você não modificou o parecer. Se continuar e esta avaliação for publicada, o autor receberá novamente o mesmo parecer. Deseja enviar assim mesmo?'
+    );
+    if (!continuarSemAlterar) return;
   }
 
   const modoComissao = !(STATE.fluxo && STATE.fluxo.podePublicarResultado === true);
@@ -1849,15 +1915,18 @@ async function salvarAvaliacaoUI(eixo, codigo) {
     });
     if (!resposta || !resposta.sucesso) throw new Error((resposta && resposta.erro) || 'Não foi possível salvar a avaliação.');
 
+    fecharPainel();
+    invalidarCacheDados();
+    // Aguarda a planilha responder antes de devolver o usuário à lista, para que
+    // status e atribuições apareçam atualizados imediatamente.
+    await carregarSubmissoes();
+    aplicarFiltrosLocais();
+
     if (resposta.aguardandoComissao) {
       mostrarModalSite('Avaliação salva', 'Sua avaliação foi registrada e está aguardando a liberação da comissão.');
     } else {
       mostrarModalSite('Resultado enviado', 'A avaliação foi registrada e o resultado foi publicado ao autor.');
     }
-
-    fecharPainel();
-    invalidarCacheDados();
-    carregarSubmissoes();
   } catch (erro) { mostrarModalSite('Erro ao salvar avaliação', erro.message); }
 }
 
