@@ -756,6 +756,105 @@
   .tutorial-passo strong{color:var(--fpbf-primary)}
   .fluxo-aviso{padding:12px 14px;border-radius:9px;background:#f8f5ef;border:1px solid var(--fpbf-border);font-size:13px;margin-bottom:14px}
 
+
+/* Refinamento visual — versão final */
+:root {
+  --shadow-soft: 0 8px 28px rgba(36, 28, 24, .08);
+  --shadow-card: 0 3px 14px rgba(36, 28, 24, .06);
+}
+
+/* Cartões do detalhe: espaçamento interno consistente */
+.bloco {
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(128, 110, 96, .16);
+  background: rgba(255,255,255,.98);
+  padding: 22px 24px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.bloco h3 {
+  letter-spacing: .015em;
+  margin: 0 0 16px;
+  line-height: 1.2;
+}
+.bloco .linha-info { padding: 9px 0; }
+.bloco .campo { margin-bottom: 16px; }
+.bloco .campo:last-of-type { margin-bottom: 0; }
+.bloco iframe { display:block; }
+.bloco > a, .bloco > div > a { line-height:1.4; }
+
+/* O botão final pertence ao cartão, não à borda da página */
+.acao-final-avaliacao {
+  margin: 24px -24px -22px;
+  padding: 20px 24px;
+  border-top: 1px solid var(--fpbf-border);
+  background: #fcfbf9;
+  display: flex;
+  justify-content: flex-end;
+}
+.campo label { font-weight: 650; letter-spacing: -.005em; }
+.campo input, .campo select, .campo textarea, .barra-filtros input, .barra-filtros select {
+  border-radius: 11px !important;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.campo input:focus, .campo select:focus, .campo textarea:focus, .barra-filtros input:focus, .barra-filtros select:focus {
+  outline: none;
+  border-color: rgba(139,30,45,.55) !important;
+  box-shadow: 0 0 0 4px rgba(139,30,45,.08);
+}
+.btn { border-radius: 11px; font-weight: 650; transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease; }
+.btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(36,28,24,.12); }
+.btn-acao-final {
+  width: auto !important;
+  min-width: 230px;
+  padding: 13px 22px;
+  font-size: 14px;
+}
+.avaliacao-existente { border-radius: 12px; }
+.fluxo-aviso { border-radius: 12px; line-height: 1.55; }
+#painel-detalhe .painel-corpo { scroll-behavior: smooth; }
+@media (max-width: 720px) {
+  .bloco { padding: 18px 16px; border-radius: 14px; }
+  .acao-final-avaliacao {
+    margin: 20px -16px -18px;
+    padding: 16px;
+    justify-content: stretch;
+  }
+  .btn-acao-final { width: 100% !important; min-width: 0; }
+  .linha-info { gap: 18px; }
+}
+
+
+  /* Guia permanente do(a) avaliador(a) */
+  .guia-hero {
+    background: linear-gradient(135deg, rgba(139,30,45,.08), rgba(139,30,45,.02));
+    border: 1px solid var(--fpbf-border);
+    border-radius: 16px;
+    padding: 26px 28px;
+    margin-bottom: 20px;
+  }
+  .guia-hero h2 { margin: 0 0 8px; font-family: var(--fpbf-serif); color: var(--fpbf-primary); font-size: 26px; }
+  .guia-hero p { margin: 0; color: var(--fpbf-muted); line-height: 1.65; max-width: 900px; }
+  .guia-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+  .guia-card {
+    background: var(--fpbf-card); border: 1px solid var(--fpbf-border); border-radius: 14px;
+    padding: 20px 22px; box-shadow: 0 6px 20px rgba(45,41,38,.04);
+  }
+  .guia-card.guia-largo { grid-column: 1 / -1; }
+  .guia-card h3 { margin: 0 0 10px; font-family: var(--fpbf-serif); font-size: 19px; color: var(--fpbf-primary); }
+  .guia-card p, .guia-card li { font-size: 13.5px; line-height: 1.65; color: var(--fpbf-text); }
+  .guia-card ul, .guia-card ol { margin: 8px 0 0 20px; padding: 0; }
+  .guia-card li + li { margin-top: 6px; }
+  .guia-etapa { display:flex; gap:12px; align-items:flex-start; margin-top:12px; }
+  .guia-numero { flex:0 0 28px; width:28px; height:28px; border-radius:50%; background:var(--fpbf-primary); color:white; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; }
+  .guia-etapa strong { display:block; margin-bottom:2px; }
+  .guia-aviso { margin-top: 12px; padding: 12px 14px; border-radius: 10px; background: #faf6ef; border:1px solid #eadfce; font-size:13px; line-height:1.55; }
+  .guia-status { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .guia-chip { padding:7px 10px; border-radius:999px; border:1px solid var(--fpbf-border); background:#fff; font-size:12px; font-weight:600; }
+  .guia-link-btn { display:inline-flex; align-items:center; gap:6px; margin-top:12px; padding:9px 13px; border:1px solid var(--fpbf-border); border-radius:9px; background:#fff; color:var(--fpbf-primary); text-decoration:none; font-weight:600; font-size:13px; }
+  @media (max-width: 820px) { .guia-grid { grid-template-columns:1fr; } .guia-card.guia-largo { grid-column:auto; } .guia-hero { padding:20px; } }
+
 </style>
 </head>
 <body>
@@ -768,7 +867,7 @@
     <img class="login-logo" src="https://i.ibb.co/wZL2YY0P/logo-forum.png" alt="Logo FPBF">
     <div class="login-eyebrow">FPBF Avalia</div>
     <h1 id="login-titulo">Entrar no sistema</h1>
-    <p class="sub" id="login-subtitulo">Painel da comissão e dos avaliadores do III Fórum Paraibano de Física.</p>
+    <p class="sub" id="login-subtitulo">Painel da comissão e dos(as) avaliadores(as) do III Fórum Paraibano de Física.</p>
 
     <form id="form-login">
       <div class="campo">
@@ -851,7 +950,6 @@
             <option value="Recebido">Recebido</option>
             <option value="Em análise">Em análise</option>
             <option value="Correção solicitada">Correção solicitada</option>
-            <option value="Aprovado com correções">Aprovado com correções</option>
             <option value="Reenviado">Reenviado</option>
             <option value="Aprovado">Aprovado</option>
             <option value="Reprovado">Reprovado</option>
@@ -877,13 +975,118 @@
       </section>
 
 
+
+      <!-- GUIA DO(A) AVALIADOR(A) -->
+      <section class="secao" id="secao-guia">
+        <div class="guia-hero">
+          <h2>Guia do(a) Avaliador(a)</h2>
+          <p>Este guia reúne o fluxo completo do FPBF Avalia. Consulte sempre que tiver dúvida sobre trabalhos atribuídos, critérios, parecer, estados, publicação do resultado ou funcionamento da plataforma.</p>
+        </div>
+
+        <div class="guia-grid">
+          <div class="guia-card guia-largo">
+            <h3>1. Fluxo completo da avaliação</h3>
+            <div class="guia-etapa"><div class="guia-numero">1</div><div><strong>Acesse “Meus Trabalhos”</strong>Você verá apenas os trabalhos atribuídos ao seu usuário e compatíveis com seus eixos de atuação.</div></div>
+            <div class="guia-etapa"><div class="guia-numero">2</div><div><strong>Abra o trabalho</strong>Confira título, autores, eixo, modalidade, arquivo submetido e o estado atual antes de começar a avaliação.</div></div>
+            <div class="guia-etapa"><div class="guia-numero">3</div><div><strong>Leia o arquivo integralmente</strong>Use o visualizador do próprio painel ou “Abrir em nova aba” quando precisar ampliar o documento.</div></div>
+            <div class="guia-etapa"><div class="guia-numero">4</div><div><strong>Atribua as notas</strong>Preencha todos os critérios apresentados. Os critérios e limites são definidos pela Comissão Organizadora e podem ser atualizados no sistema.</div></div>
+            <div class="guia-etapa"><div class="guia-numero">5</div><div><strong>Escolha o status recomendado</strong>Selecione somente o resultado compatível com a análise realizada.</div></div>
+            <div class="guia-etapa"><div class="guia-numero">6</div><div><strong>Escreva o Parecer do Avaliador(a)</strong>O parecer deve ser claro, objetivo e suficiente para explicar ao autor o resultado e, quando houver, as correções necessárias.</div></div>
+            <div class="guia-etapa"><div class="guia-numero">7</div><div><strong>Revise e envie</strong>Leia novamente notas, status e parecer antes de clicar no botão final. O texto do botão informa se o resultado será publicado ao autor ou ficará para revisão da comissão.</div></div>
+          </div>
+
+          <div class="guia-card">
+            <h3>2. Estados do trabalho</h3>
+            <div class="guia-status">
+              <span class="guia-chip">Recebido</span><span class="guia-chip">Em análise</span><span class="guia-chip">Correção solicitada</span><span class="guia-chip">Reenviado</span><span class="guia-chip">Aprovado</span><span class="guia-chip">Reprovado</span>
+            </div>
+            <ul>
+              <li><strong>Recebido:</strong> submissão registrada, ainda sem avaliação iniciada.</li>
+              <li><strong>Em análise:</strong> o trabalho já foi atribuído para avaliação.</li>
+              <li><strong>Correção solicitada:</strong> o autor deve ajustar o trabalho e enviar nova versão.</li>
+              <li><strong>Reenviado:</strong> uma versão corrigida foi recebida e deve ser verificada novamente.</li>
+              <li><strong>Aprovado:</strong> trabalho aceito após a avaliação.</li>
+              <li><strong>Reprovado:</strong> trabalho não aprovado para apresentação nesta edição.</li>
+            </ul>
+          </div>
+
+          <div class="guia-card">
+            <h3>3. Quem libera o resultado?</h3>
+            <p>O sistema pode operar em dois modos definidos pela Comissão Organizadora.</p>
+            <ul>
+              <li><strong>Avaliador(a) envia o resultado:</strong> o botão final aparece como “Enviar resultado ao autor”. Ao confirmar, o status e o parecer são publicados e o e-mail correspondente é enviado ao autor.</li>
+              <li><strong>Só a comissão libera:</strong> sua avaliação é salva para revisão. O autor ainda não recebe o resultado até a comissão realizar a liberação.</li>
+            </ul>
+            <div class="guia-aviso"><strong>Importante:</strong> o painel consulta essa permissão diretamente no sistema. Sempre observe a mensagem exibida em “Resultado da avaliação” antes do envio.</div>
+          </div>
+
+          <div class="guia-card">
+            <h3>4. Como escrever o parecer</h3>
+            <ul>
+              <li>Explique de forma objetiva os principais pontos considerados na avaliação.</li>
+              <li>Quando solicitar correção, indique exatamente o que precisa ser revisto.</li>
+              <li>Evite mensagens vagas como “corrigir o trabalho” sem indicar o problema.</li>
+              <li>Mantenha linguagem respeitosa, técnica e adequada ao contexto acadêmico.</li>
+              <li>Confira se o parecer está coerente com o status escolhido.</li>
+            </ul>
+            <div class="guia-aviso">Se você tentar reenviar uma avaliação sem alterar o parecer, o sistema exibirá uma confirmação porque o autor poderá receber novamente o mesmo texto.</div>
+          </div>
+
+          <div class="guia-card">
+            <h3>5. Correção solicitada e reenvio</h3>
+            <p>Quando o resultado for <strong>Correção solicitada</strong>, o autor recebe as orientações e utiliza a aba de acompanhamento da submissão para enviar a nova versão.</p>
+            <p>Quando a nova versão entrar no sistema, o trabalho ficará como <strong>Reenviado</strong>. Ao abrir novamente, confira o novo arquivo e verifique se as observações anteriores foram atendidas antes de definir o resultado seguinte.</p>
+          </div>
+
+          <div class="guia-card">
+            <h3>6. Critérios e notas</h3>
+            <p>Os critérios exibidos na avaliação são controlados pela comissão. Se houver alteração nos critérios, a plataforma sincroniza os valores atuais com o servidor.</p>
+            <ul>
+              <li>Preencha todos os critérios antes de finalizar.</li>
+              <li>A nota exibida deve respeitar o limite indicado em cada critério.</li>
+              <li>O resultado não deve ser definido apenas pela soma numérica: considere também a análise acadêmica do trabalho e as regras estabelecidas para o evento.</li>
+            </ul>
+          </div>
+
+          <div class="guia-card">
+            <h3>7. Segurança durante o carregamento</h3>
+            <p>Quando o círculo de carregamento estiver visível, a plataforma bloqueia temporariamente os comandos. Isso evita envio duplicado, duas avaliações simultâneas ou atribuições repetidas.</p>
+            <div class="guia-aviso">Não recarregue ou feche a página enquanto uma ação de envio estiver sendo processada, salvo se o sistema apresentar erro e liberar novamente a interface.</div>
+          </div>
+
+          <div class="guia-card">
+            <h3>8. Depois de enviar</h3>
+            <p>Após a conclusão, a plataforma atualiza a lista de trabalhos para refletir o estado mais recente. Confira o status mostrado em “Meus Trabalhos” antes de abrir outra avaliação.</p>
+            <p>Se o trabalho continuar disponível para nova análise, isso pode ocorrer porque houve reenvio de uma versão corrigida ou porque a comissão ainda precisa liberar o resultado.</p>
+          </div>
+
+          <div class="guia-card">
+            <h3>9. Boas práticas</h3>
+            <ul>
+              <li>Avalie cada trabalho de forma independente.</li>
+              <li>Leia todo o documento antes de registrar o resultado.</li>
+              <li>Revise o parecer antes de publicar.</li>
+              <li>Não compartilhe acesso, arquivos ou informações das submissões fora do processo de avaliação.</li>
+              <li>Em caso de dúvida sobre uma regra de avaliação, consulte a Comissão Organizadora antes de publicar o resultado.</li>
+            </ul>
+          </div>
+
+          <div class="guia-card">
+            <h3>10. Acesso à plataforma</h3>
+            <p>Use sempre o endereço oficial do sistema para acessar suas avaliações:</p>
+            <a class="guia-link-btn" href="https://submissoesfpbf-dotcom.github.io/fpbfavalia/" target="_blank" rel="noopener">Abrir FPBF Avalia ↗</a>
+            <div class="guia-aviso">O guia de primeiro acesso continua aparecendo automaticamente para novos usuários. Esta aba é a versão permanente e detalhada para consulta a qualquer momento.</div>
+          </div>
+        </div>
+      </section>
+
       <!-- ATRIBUIÇÕES EM LOTE (comissão) -->
       <section class="secao" id="secao-atribuicoes">
         <div class="card-form">
           <h2>Atribuir trabalhos</h2>
-          <p style="font-size:13px; color:var(--fpbf-muted); margin-top:-8px; margin-bottom:16px;">Selecione vários trabalhos livres e atribua todos ao mesmo avaliador. Trabalhos já atribuídos aparecem em cinza e não podem ser selecionados quando o modo de avaliador único estiver ativo.</p>
+          <p style="font-size:13px; color:var(--fpbf-muted); margin-top:-8px; margin-bottom:16px;">Selecione vários trabalhos livres e atribua todos ao(à) mesmo(a) avaliador(a). Trabalhos já atribuídos aparecem em cinza e não podem ser selecionados quando o modo de avaliador(a) único(a) estiver ativo.</p>
           <div class="atribuicoes-toolbar">
-            <select id="atrib-lote-avaliador" onchange="renderizarListaAtribuicoesPorAvaliador()"><option value="">Selecione o avaliador...</option></select>
+            <select id="atrib-lote-avaliador" onchange="renderizarListaAtribuicoesPorAvaliador()"><option value="">Selecione o(a) avaliador(a)(a)...</option></select>
             <button type="button" class="btn btn-secundario" style="width:auto;" onclick="selecionarTodosLivres()">Selecionar livres</button>
             <button type="button" class="btn btn-primary" style="width:auto;" id="btn-atribuir-lote" onclick="atribuirSelecionadosUI()">Atribuir selecionados</button>
             <span class="contador-selecao" id="contador-atribuicoes">0 selecionados</span>
@@ -915,7 +1118,7 @@
                 </select>
               </div>
               <div class="campo">
-                <label>Eixos (avaliador)</label>
+                <label>Eixos do(a) avaliador(a)</label>
                 <div class="checkbox-grupo">
                   <label class="checkbox-item"><input type="checkbox" value="Eixo 1"> Eixo 1</label>
                   <label class="checkbox-item"><input type="checkbox" value="Eixo 2"> Eixo 2</label>
@@ -954,7 +1157,7 @@
         <div class="card-form">
           <h2>Critérios de avaliação</h2>
           <p style="font-size:13px; color:var(--fpbf-muted); margin-top:-8px; margin-bottom:16px;">
-            Esses critérios aparecem no formulário de avaliação dos avaliadores, na ordem definida abaixo.
+            Esses critérios aparecem no formulário de avaliação dos(as) avaliadores(as), na ordem definida abaixo.
           </p>
 
           <div id="lista-criterios"></div>
@@ -976,18 +1179,18 @@
           <div class="toggle-linha">
             <div>
               <div class="titulo-toggle">Quem avisa o autor sobre atualizações</div>
-              <div class="desc-toggle">Define se o e-mail de atualização de status/parecer é enviado assim que o avaliador salva a avaliação, ou só quando a comissão libera manualmente.</div>
+              <div class="desc-toggle">Define se o e-mail de atualização de status/parecer é enviado assim que o(a) avaliador(a) salva a avaliação, ou só quando a comissão libera manualmente.</div>
             </div>
             <select id="config-quem-notifica" style="width:180px;">
               <option value="comissao">Só a comissão libera</option>
-              <option value="avaliador">Avaliador notifica direto</option>
+              <option value="avaliador">Avaliador(a) envia o resultado</option>
             </select>
           </div>
 
           <div class="toggle-linha">
             <div>
-              <div class="titulo-toggle">Permitir múltiplos avaliadores por trabalho</div>
-              <div class="desc-toggle">Quando ativado, um mesmo trabalho pode ser atribuído a mais de um avaliador ao mesmo tempo.</div>
+              <div class="titulo-toggle">Permitir múltiplos(as) avaliadores(as) por trabalho</div>
+              <div class="desc-toggle">Quando ativado, um mesmo trabalho pode ser atribuído a mais de um(a) avaliador(a) ao mesmo tempo.</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="config-multiplos-avaliadores">
@@ -1035,15 +1238,15 @@
 // =============================================================
 
 // Cole aqui a URL do deploy (.../exec) do Code_Admin.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbwPmNK2_F3tRxUnCcQiSScTZ-3j4kyABPBB9vj9ofaC9KSID83riwtTUl25fzDEblOyrw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbww7IDHUqQo-ivO8XFM-XxYmsd3TMTe4xsmAQxaJnxhEaNFGvviWnvNAwKGDaQR_BSS8g/exec';
 
 const CHAVE_SESSAO = 'fpbf_avalia_sessao';
 const CHAVE_CACHE = 'fpbf_avalia_cache_v3';
 const CACHE_TTL = 5 * 60 * 1000;
 
 const CORES_STATUS = {
-  'Recebido': 'info', 'Em análise': 'warning', 'Correção solicitada': 'danger',
-  'Aprovado com correções': 'warning', 'Reenviado': 'info',
+  'Recebido': 'info', 'Em análise': 'warning', 'Correção solicitada': 'warning',
+  '': 'warning', 'Reenviado': 'info',
   'Aprovado': 'success', 'Reprovado': 'danger'
 };
 
@@ -1226,8 +1429,8 @@ function mostrarTutorialPrimeiroAcesso() {
     <div class="tutorial-passos">
       <div class="tutorial-passo"><strong>1. Abra um trabalho</strong><br>Clique na linha da submissão para visualizar o arquivo, dados e andamento.</div>
       ${ehComissao
-        ? '<div class="tutorial-passo"><strong>2. Atribua avaliadores</strong><br>Ao atribuir um trabalho recebido, o status muda automaticamente para “Em análise”.</div><div class="tutorial-passo"><strong>3. Revise o resultado</strong><br>Quando a comissão controla a liberação, a proposta do avaliador fica interna até você liberar.</div>'
-        : '<div class="tutorial-passo"><strong>2. Dê as notas</strong><br>Avalie cada critério e escolha um resultado compatível: correção, aprovado com correções, aprovado ou reprovado.</div><div class="tutorial-passo"><strong>3. Parecer da comissão</strong><br>Use o único campo de parecer. Se a comissão controlar a liberação, seu texto ficará aguardando revisão; caso contrário, será publicado ao autor.</div>'}
+        ? '<div class="tutorial-passo"><strong>2. Atribua avaliadores(as)</strong><br>Ao atribuir um trabalho recebido, o status muda automaticamente para “Em análise”.</div><div class="tutorial-passo"><strong>3. Revise o resultado</strong><br>Quando a comissão controla a liberação, a proposta do(a) avaliador(a) fica interna até você liberar.</div>'
+        : '<div class="tutorial-passo"><strong>2. Dê as notas</strong><br>Avalie cada critério e escolha um resultado compatível: correção solicitada, aprovado ou reprovado.</div><div class="tutorial-passo"><strong>3. Parecer do Avaliador(a)</strong><br>Use o único campo de parecer. Se a comissão controlar a liberação, seu texto ficará aguardando revisão; caso contrário, será publicado ao autor.</div>'}
       <div class="tutorial-passo"><strong>4. Entenda os botões</strong><br>“Salvar avaliação para revisão da comissão” não publica nada. “Enviar resultado ao autor” ou “Liberar resultado ao autor” publica o status, atualiza o acompanhamento e envia o e-mail.</div>
     </div>`;
   document.getElementById('modal-site-acoes').innerHTML = '<button class="btn btn-primary" style="width:auto;" id="tutorial-entendi">Entendi</button>';
@@ -1300,13 +1503,14 @@ document.getElementById('btn-sair').addEventListener('click', async function() {
 const SECOES_COMISSAO = [
   { id: 'submissoes', label: 'Submissões' },
   { id: 'atribuicoes', label: 'Atribuições' },
-  { id: 'avaliadores', label: 'Avaliadores' },
+  { id: 'avaliadores', label: 'Avaliadores(as)' },
   { id: 'criterios', label: 'Critérios' },
   { id: 'configuracoes', label: 'Configurações' }
 ];
 
 const SECOES_AVALIADOR = [
-  { id: 'submissoes', label: 'Meus Trabalhos' }
+  { id: 'submissoes', label: 'Meus Trabalhos' },
+  { id: 'guia', label: 'Guia do(a) Avaliador(a)' }
 ];
 
 function mostrarApp() {
@@ -1411,8 +1615,9 @@ function aplicarFiltrosLocais() {
 
 const TITULOS_SECAO = {
   submissoes: ['Submissões', ''],
+  guia: ['Guia do(a) Avaliador(a)', 'Orientações completas para usar o FPBF Avalia'],
   atribuicoes: ['Atribuições', 'Selecione e distribua vários trabalhos de uma vez'],
-  avaliadores: ['Avaliadores', 'Cadastre e gerencie quem avalia cada eixo'],
+  avaliadores: ['Avaliadores(as)', 'Cadastre e gerencie quem avalia cada eixo'],
   criterios: ['Critérios de avaliação', 'Monte o formulário que os avaliadores vão preencher'],
   configuracoes: ['Configurações', 'Regras gerais do sistema']
 };
@@ -1618,11 +1823,11 @@ function renderizarPainelDetalhe(d) {
               <button class="btn-mini" onclick="removerAtribuicaoUI('${d.eixo}','${d.codigo}','${a.avaliador}')" style="margin-left:6px;">remover</button>
             </span>
           </div>
-        `).join('') || '<div style="color:var(--fpbf-muted); font-size:13px;">Nenhum avaliador atribuído ainda.</div>'}
+        `).join('') || '<div style="color:var(--fpbf-muted); font-size:13px;">Nenhum(a) avaliador(a) atribuído(a) ainda.</div>'}
 
         <div style="display:flex; gap:8px; margin-top:12px;">
           <select id="select-atribuir" style="flex:1; padding:9px 12px; border:1px solid var(--fpbf-border); border-radius:8px;">
-            <option value="">Selecione um avaliador...</option>
+            <option value="">Selecione um avaliador(a)...</option>
             ${opcoesAvaliadores}
           </select>
           <button class="btn btn-secundario" style="width:auto;" onclick="atribuirUI('${d.eixo}','${d.codigo}')">Atribuir</button>
@@ -1654,7 +1859,7 @@ function renderizarPainelDetalhe(d) {
 // ---- resultado / parecer único ----
 if (ehComissao || estouAtribuido) {
   const modoComissao = STATE.fluxo && STATE.fluxo.quemNotificaAutor === 'comissao';
-  const statusPermitidos = ['Correção solicitada','Aprovado com correções','Aprovado','Reprovado'];
+  const statusPermitidos = ['Correção solicitada','Aprovado','Reprovado'];
   const proposta = !ehComissao && minhaAvaliacao ? minhaAvaliacao.statusProposto : '';
   const parecerInicial = !ehComissao && minhaAvaliacao ? (minhaAvaliacao.parecerProposto || '') : (d.parecer || '');
 
@@ -1663,7 +1868,7 @@ if (ehComissao || estouAtribuido) {
   if (ehComissao) {
     textoFluxo = modoComissao
       ? 'A comissão controla a publicação. O autor e a página de acompanhamento só verão o resultado depois de clicar em “Liberar resultado ao autor”.'
-      : 'Os avaliadores podem publicar resultados. A comissão também pode corrigir ou publicar um resultado por aqui.';
+      : 'Os(as) avaliadores(as) podem publicar resultados. A comissão também pode corrigir ou publicar um resultado por aqui.';
     textoBotao = 'Liberar resultado ao autor';
   } else {
     textoFluxo = modoComissao
@@ -1684,12 +1889,14 @@ if (ehComissao || estouAtribuido) {
         </select>
       </div>
       <div class="campo">
-        <label>Parecer da comissão</label>
+        <label>Parecer do Avaliador(a)</label>
         <textarea id="textarea-parecer" data-parecer-original="${escapeHtml(parecerInicial)}" placeholder="Escreva aqui o parecer que poderá ser apresentado ao autor...">${escapeHtml(parecerInicial)}</textarea>
       </div>
-      ${ehComissao
-        ? `<button class="btn btn-primary" style="width:auto;" onclick="publicarResultadoUI('${d.eixo}','${d.codigo}')">${textoBotao}</button>`
-        : ''}
+      <div class="acao-final-avaliacao">
+        ${ehComissao
+          ? `<button class="btn btn-primary btn-acao-final" onclick="publicarResultadoUI('${d.eixo}','${d.codigo}')">${textoBotao}</button>`
+          : `<button class="btn btn-primary btn-acao-final" onclick="salvarAvaliacaoUI('${d.eixo}','${d.codigo}')">${textoBotao}</button>`}
+      </div>
     </div>
   `;
 }
@@ -1717,7 +1924,7 @@ function renderizarAtribuicoes() {
 
   const valorAtual = sel.value;
   const avaliadores = (STATE.avaliadoresCache || []).filter(u => u.papel === 'Avaliador' && u.ativo);
-  sel.innerHTML = '<option value="">Selecione o avaliador...</option>' + avaliadores.map(u =>
+  sel.innerHTML = '<option value="">Selecione o(a) avaliador(a)(a)...</option>' + avaliadores.map(u =>
     `<option value="${escapeHtml(u.email)}">${escapeHtml(u.nome)} — ${escapeHtml(u.email)}</option>`
   ).join('');
   if (avaliadores.some(u => u.email === valorAtual)) sel.value = valorAtual;
@@ -1732,14 +1939,14 @@ function renderizarListaAtribuicoesPorAvaliador() {
 
   const email = String(sel.value || '').trim().toLowerCase();
   if (!email) {
-    lista.innerHTML = '<div class="estado-vazio">Selecione primeiro um avaliador para ver apenas os trabalhos dos eixos dele.</div>';
+    lista.innerHTML = '<div class="estado-vazio">Selecione primeiro um avaliador(a) para ver apenas os trabalhos dos eixos em que ele(a) está alocado(a).</div>';
     atualizarContadorAtribuicoes();
     return;
   }
 
   const avaliador = (STATE.avaliadoresCache || []).find(u => String(u.email || '').trim().toLowerCase() === email);
   if (!avaliador) {
-    lista.innerHTML = '<div class="estado-vazio">Avaliador não encontrado.</div>';
+    lista.innerHTML = '<div class="estado-vazio">Avaliador(a) não encontrado(a).</div>';
     atualizarContadorAtribuicoes();
     return;
   }
@@ -1759,7 +1966,7 @@ function renderizarListaAtribuicoesPorAvaliador() {
       <div><strong>${escapeHtml(s.codigo)} — ${escapeHtml(s.titulo)}</strong><div class="meta">${escapeHtml(s.eixo)} · ${escapeHtml(s.modalidade)} · ${escapeHtml(s.status)}</div></div>
       <div style="font-size:12px; text-align:right;">${ja ? 'Já atribuído: ' + s.atribuidoPara.map(escapeHtml).join(', ') : '<span style="color:var(--fpbf-success);">Livre</span>'}</div>
     </label>`;
-  }).join('') || '<div class="estado-vazio">Nenhum trabalho disponível nos eixos deste avaliador.</div>';
+  }).join('') || '<div class="estado-vazio">Nenhum trabalho disponível nos eixos deste avaliador(a).</div>';
   atualizarContadorAtribuicoes();
 }
 
@@ -1777,10 +1984,10 @@ function selecionarTodosLivres() {
 async function atribuirSelecionadosUI() {
   const avaliadorEmail = document.getElementById('atrib-lote-avaliador').value;
   const itens = [...document.querySelectorAll('.chk-atrib-lote:checked')].map(c => ({eixo:c.dataset.eixo, codigo:c.dataset.codigo}));
-  if (!avaliadorEmail) return mostrarModalSite('Selecione o avaliador', 'Escolha quem receberá os trabalhos selecionados.');
+  if (!avaliadorEmail) return mostrarModalSite('Selecione o(a) avaliador(a)', 'Escolha o(a) avaliador(a) que receberá os trabalhos selecionados.');
   if (!itens.length) return mostrarModalSite('Selecione os trabalhos', 'Marque pelo menos um trabalho livre.');
 
-  const ok = await confirmarModalSite('Confirmar atribuição?', `Você vai atribuir ${itens.length} trabalho${itens.length === 1 ? '' : 's'} ao avaliador selecionado.`);
+  const ok = await confirmarModalSite('Confirmar atribuição?', `Você vai atribuir ${itens.length} trabalho${itens.length === 1 ? '' : 's'} ao(à) avaliador(a) selecionado(a).`);
   if (!ok) return;
 
   try {
@@ -1866,13 +2073,6 @@ function renderizarFormularioAvaliacao(eixo, codigo, avaliacaoExistente) {
       </div>
     `;
   });
-
-  const modoComissao = !(STATE.fluxo && STATE.fluxo.podePublicarResultado === true);
-  html += `
-    <button class="btn btn-primary" style="width:auto;" onclick="salvarAvaliacaoUI('${eixo}','${codigo}')">
-      ${modoComissao ? 'Salvar avaliação para revisão da comissão' : 'Enviar resultado ao autor'}
-    </button>
-  `;
 
   container.innerHTML = html;
 }
@@ -2074,7 +2274,7 @@ document.getElementById('btn-salvar-criterios').addEventListener('click', async 
     const atualizados = await chamar('listarCriterios');
     STATE.criteriosCache = (atualizados && atualizados.criterios) || [];
     renderizarEditorCriterios();
-    mostrarMensagem('criterios-mensagem', 'sucesso', 'Critérios salvos e publicados para os avaliadores!');
+    mostrarMensagem('criterios-mensagem', 'sucesso', 'Critérios salvos e publicados para os(as) avaliadores(as)!');
   } catch (erro) {
     mostrarMensagem('criterios-mensagem', 'erro', erro.message);
   }
@@ -2112,7 +2312,7 @@ document.getElementById('btn-salvar-config').addEventListener('click', async fun
     try { await sincronizarFluxoAvaliacao(); } catch (e) {}
     // Remove qualquer cache legado para impedir que outra regra antiga seja reaproveitada.
     try { localStorage.removeItem('fpbf_avalia_cache_v2'); } catch (e) {}
-    mostrarMensagem('config-mensagem', 'sucesso', 'Configurações salvas e publicadas! Novos acessos de avaliadores usarão esta regra.');
+    mostrarMensagem('config-mensagem', 'sucesso', 'Configurações salvas e publicadas! Novos acessos de avaliadores(as) usarão esta regra.');
   } catch (erro) {
     mostrarMensagem('config-mensagem', 'erro', erro.message);
   }
