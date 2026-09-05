@@ -1022,7 +1022,7 @@
 // =============================================================
 
 // Cole aqui a URL do deploy (.../exec) do Code_Admin.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbwEI9q4FVUUXy4dNbOJaFXxhzcYh94CXZVKtvnK_ZE9oh7BaNkrZQKg6ytH2kyiNkll/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx-AmK09XNKAiA2QbCqykjq_0EwxQtyPrDoe4OyqTCDAElfIh8t28ZWXFFb9BuaD_G8hA/exec';
 
 const CHAVE_SESSAO = 'fpbf_avalia_sessao';
 const CHAVE_CACHE = 'fpbf_avalia_cache_v3';
@@ -1043,7 +1043,7 @@ const STATE = {
   submissaoAberta: null,
   submissoesCache: [],
   totalGeralCache: 0,
-  fluxo: { quemNotificaAutor: 'comissao' }
+  fluxo: { quemNotificaAutor: 'comissao', podePublicarResultado: false }
 };
 
 
@@ -1327,7 +1327,7 @@ function mostrarApp() {
   // Trabalhos podem aparecer do cache, mas critérios e regras de publicação
   // são sempre sincronizados com o servidor antes do uso.
   STATE.criteriosCache = [];
-  STATE.fluxo = { quemNotificaAutor: 'comissao' };
+  STATE.fluxo = { quemNotificaAutor: 'comissao', podePublicarResultado: false };
   carregarPainelInicial().finally(() => setTimeout(mostrarTutorialPrimeiroAcesso, 250));
 
 }
@@ -1500,7 +1500,13 @@ function renderizarSubmissoes(lista, totalGeral) {
 
 async function sincronizarFluxoAvaliacao() {
   const resposta = await chamar('obterFluxoAvaliacao');
-  if (resposta && resposta.sucesso && resposta.fluxo) STATE.fluxo = resposta.fluxo;
+  if (resposta && resposta.sucesso && resposta.fluxo) {
+    STATE.fluxo = {
+      quemNotificaAutor: String(resposta.fluxo.quemNotificaAutor || 'comissao').trim().toLowerCase() === 'avaliador' ? 'avaliador' : 'comissao',
+      permitirMultiplosAvaliadores: resposta.fluxo.permitirMultiplosAvaliadores,
+      podePublicarResultado: resposta.fluxo.podePublicarResultado === true
+    };
+  }
   return STATE.fluxo;
 }
 
@@ -1804,7 +1810,7 @@ function renderizarFormularioAvaliacao(eixo, codigo, avaliacaoExistente) {
     `;
   });
 
-  const modoComissao = STATE.fluxo && STATE.fluxo.quemNotificaAutor === 'comissao';
+  const modoComissao = !(STATE.fluxo && STATE.fluxo.podePublicarResultado === true);
   html += `
     <button class="btn btn-primary" style="width:auto;" onclick="salvarAvaliacaoUI('${eixo}','${codigo}')">
       ${modoComissao ? 'Salvar avaliação para revisão da comissão' : 'Enviar resultado ao autor'}
@@ -1830,7 +1836,7 @@ async function salvarAvaliacaoUI(eixo, codigo) {
     return mostrarModalSite('Selecione o resultado', 'Escolha o status recomendado para concluir sua avaliação.');
   }
 
-  const modoComissao = STATE.fluxo && STATE.fluxo.quemNotificaAutor === 'comissao';
+  const modoComissao = !(STATE.fluxo && STATE.fluxo.podePublicarResultado === true);
   const texto = modoComissao
     ? 'Sua avaliação será enviada para revisão da comissão. O autor ainda não receberá o resultado.'
     : 'O resultado será publicado para o autor e o e-mail correspondente será enviado.';
