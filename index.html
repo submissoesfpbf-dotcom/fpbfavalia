@@ -641,7 +641,47 @@
   .criterio-nota { font-weight: 700; color: var(--fpbf-primary); font-size: 15px; }
   .criterio-desc { font-size: 12.5px; color: var(--fpbf-muted); margin-bottom: 8px; }
 
-  input[type="range"] { width: 100%; accent-color: var(--fpbf-primary); }
+  .escala-nota {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .escala-opcao {
+    appearance: none;
+    border: 1px solid var(--fpbf-border);
+    background: #fff;
+    color: var(--fpbf-text);
+    min-height: 44px;
+    border-radius: 10px;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform .14s ease, border-color .14s ease, background .14s ease, color .14s ease, box-shadow .14s ease;
+  }
+  .escala-opcao:hover {
+    border-color: var(--fpbf-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(122, 29, 43, .10);
+  }
+  .escala-opcao.ativa {
+    background: var(--fpbf-primary);
+    border-color: var(--fpbf-primary);
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(122, 29, 43, .20);
+  }
+  .escala-legenda {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 7px;
+    color: var(--fpbf-muted);
+    font-size: 11.5px;
+  }
+  @media (max-width: 640px) {
+    .escala-nota { grid-template-columns: repeat(auto-fit, minmax(38px, 1fr)); gap: 6px; }
+    .escala-opcao { min-height: 40px; border-radius: 8px; }
+  }
 
   .checkbox-grupo { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
   .checkbox-item { display: flex; align-items: center; gap: 6px; font-size: 13px; }
@@ -2060,16 +2100,23 @@ function renderizarFormularioAvaliacao(eixo, codigo, avaliacaoExistente) {
   let html = '';
 
   STATE.criteriosCache.forEach(c => {
-    const valorInicial = notasIniciais[c.id] !== undefined ? notasIniciais[c.id] : Math.round(c.escalaMax / 2);
+    const valorInicial = notasIniciais[c.id] !== undefined ? Number(notasIniciais[c.id]) : Math.round(c.escalaMax / 2);
+    const opcoes = Array.from({ length: Number(c.escalaMax) + 1 }, (_, nota) => `
+      <button type="button" class="escala-opcao ${nota === valorInicial ? 'ativa' : ''}"
+        data-valor="${nota}" onclick="selecionarNotaCriterio('${c.id}', ${nota}, this)"
+        aria-label="Nota ${nota} de ${c.escalaMax}" aria-pressed="${nota === valorInicial}">${nota}</button>
+    `).join('');
+
     html += `
       <div class="criterio-linha">
         <div class="criterio-topo">
           <span class="criterio-nome">${escapeHtml(c.nome)}</span>
-          <span class="criterio-nota" id="valor-${c.id}">${valorInicial}</span>
+          <span class="criterio-nota" id="valor-${c.id}">${valorInicial} / ${c.escalaMax}</span>
         </div>
         ${c.descricao ? `<div class="criterio-desc">${escapeHtml(c.descricao)}</div>` : ''}
-        <input type="range" min="0" max="${c.escalaMax}" step="1" value="${valorInicial}"
-          data-criterio="${c.id}" oninput="document.getElementById('valor-${c.id}').textContent = this.value">
+        <div class="escala-nota" data-escala="${c.id}">${opcoes}</div>
+        <div class="escala-legenda"><span>Menor nota</span><span>Maior nota</span></div>
+        <input type="hidden" class="criterio-valor" data-criterio="${c.id}" value="${valorInicial}">
       </div>
     `;
   });
@@ -2077,10 +2124,29 @@ function renderizarFormularioAvaliacao(eixo, codigo, avaliacaoExistente) {
   container.innerHTML = html;
 }
 
+function selecionarNotaCriterio(criterioId, valor, botao) {
+  const escala = botao.closest('.escala-nota');
+  if (!escala) return;
+
+  escala.querySelectorAll('.escala-opcao').forEach(opcao => {
+    const ativa = opcao === botao;
+    opcao.classList.toggle('ativa', ativa);
+    opcao.setAttribute('aria-pressed', ativa ? 'true' : 'false');
+  });
+
+  const input = document.querySelector(`#form-avaliacao .criterio-valor[data-criterio="${criterioId}"]`);
+  if (input) input.value = valor;
+
+  const criterio = STATE.criteriosCache.find(c => String(c.id) === String(criterioId));
+  const max = criterio ? criterio.escalaMax : '';
+  const exibicao = document.getElementById(`valor-${criterioId}`);
+  if (exibicao) exibicao.textContent = `${valor} / ${max}`;
+}
+
 
 async function salvarAvaliacaoUI(eixo, codigo) {
   const notas = {};
-  document.querySelectorAll('#form-avaliacao input[type="range"]').forEach(input => {
+  document.querySelectorAll('#form-avaliacao .criterio-valor').forEach(input => {
     notas[input.dataset.criterio] = Number(input.value);
   });
 
