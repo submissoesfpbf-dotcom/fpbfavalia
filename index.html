@@ -991,7 +991,7 @@
             <div class="guia-etapa"><div class="guia-numero">3</div><div><strong>Leia o arquivo integralmente</strong>Use o visualizador do próprio painel ou “Abrir em nova aba” quando precisar ampliar o documento.</div></div>
             <div class="guia-etapa"><div class="guia-numero">4</div><div><strong>Atribua as notas</strong>Preencha todos os critérios apresentados. Os critérios e limites são definidos pela Comissão Organizadora e podem ser atualizados no sistema.</div></div>
             <div class="guia-etapa"><div class="guia-numero">5</div><div><strong>Escolha o status recomendado</strong>Selecione somente o resultado compatível com a análise realizada.</div></div>
-            <div class="guia-etapa"><div class="guia-numero">6</div><div><strong>Escreva o Parecer do Avaliador(a)</strong>O parecer deve ser claro, objetivo e suficiente para explicar ao autor o resultado e, quando houver, as correções necessárias.</div></div>
+            <div class="guia-etapa"><div class="guia-numero">6</div><div><strong>Escreva o Parecer da Avaliação</strong>O parecer deve ser claro, objetivo e suficiente para explicar ao autor o resultado e, quando houver, as correções necessárias.</div></div>
             <div class="guia-etapa"><div class="guia-numero">7</div><div><strong>Revise e envie</strong>Leia novamente notas, status e parecer antes de clicar no botão final. O texto do botão informa se o resultado será publicado ao autor ou ficará para revisão da comissão.</div></div>
           </div>
 
@@ -1238,7 +1238,7 @@
 // =============================================================
 
 // Cole aqui a URL do deploy (.../exec) do Code_Admin.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbww7IDHUqQo-ivO8XFM-XxYmsd3TMTe4xsmAQxaJnxhEaNFGvviWnvNAwKGDaQR_BSS8g/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxjaWuV1PqgFVrOzlfUD2RUHgNsrrxStG_t7F5sCMq0MY5f9dbS6kK8N5pGpw9-O_68XQ/exec';
 
 const CHAVE_SESSAO = 'fpbf_avalia_sessao';
 const CHAVE_CACHE = 'fpbf_avalia_cache_v3';
@@ -1430,7 +1430,7 @@ function mostrarTutorialPrimeiroAcesso() {
       <div class="tutorial-passo"><strong>1. Abra um trabalho</strong><br>Clique na linha da submissão para visualizar o arquivo, dados e andamento.</div>
       ${ehComissao
         ? '<div class="tutorial-passo"><strong>2. Atribua avaliadores(as)</strong><br>Ao atribuir um trabalho recebido, o status muda automaticamente para “Em análise”.</div><div class="tutorial-passo"><strong>3. Revise o resultado</strong><br>Quando a comissão controla a liberação, a proposta do(a) avaliador(a) fica interna até você liberar.</div>'
-        : '<div class="tutorial-passo"><strong>2. Dê as notas</strong><br>Avalie cada critério e escolha um resultado compatível: correção solicitada, aprovado ou reprovado.</div><div class="tutorial-passo"><strong>3. Parecer do Avaliador(a)</strong><br>Use o único campo de parecer. Se a comissão controlar a liberação, seu texto ficará aguardando revisão; caso contrário, será publicado ao autor.</div>'}
+        : '<div class="tutorial-passo"><strong>2. Dê as notas</strong><br>Avalie cada critério e escolha um resultado compatível: correção solicitada, aprovado ou reprovado.</div><div class="tutorial-passo"><strong>3. Parecer da Avaliação</strong><br>Use o único campo de parecer. Se a comissão controlar a liberação, seu texto ficará aguardando revisão; caso contrário, será publicado ao autor.</div>'}
       <div class="tutorial-passo"><strong>4. Entenda os botões</strong><br>“Salvar avaliação para revisão da comissão” não publica nada. “Enviar resultado ao autor” ou “Liberar resultado ao autor” publica o status, atualiza o acompanhamento e envia o e-mail.</div>
     </div>`;
   document.getElementById('modal-site-acoes').innerHTML = '<button class="btn btn-primary" style="width:auto;" id="tutorial-entendi">Entendi</button>';
@@ -1889,7 +1889,7 @@ if (ehComissao || estouAtribuido) {
         </select>
       </div>
       <div class="campo">
-        <label>Parecer do Avaliador(a)</label>
+        <label>Parecer da Avaliação</label>
         <textarea id="textarea-parecer" data-parecer-original="${escapeHtml(parecerInicial)}" placeholder="Escreva aqui o parecer que poderá ser apresentado ao autor...">${escapeHtml(parecerInicial)}</textarea>
       </div>
       <div class="acao-final-avaliacao">
