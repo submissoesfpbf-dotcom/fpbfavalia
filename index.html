@@ -699,6 +699,18 @@
     #painel-detalhe { left: 0; }
     .login-logo { width: 112px; height: 112px; }
   }
+
+  .modal-site-backdrop{position:fixed;inset:0;background:rgba(30,20,15,.48);display:none;align-items:center;justify-content:center;z-index:300;padding:20px}
+  .modal-site-backdrop.visivel{display:flex}
+  .modal-site{width:min(560px,96vw);max-height:86vh;overflow:auto;background:#fff;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.25);padding:26px}
+  .modal-site h2{font-size:24px;color:var(--fpbf-primary);margin-bottom:10px}
+  .modal-site p{color:var(--fpbf-text)}
+  .modal-acoes{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;flex-wrap:wrap}
+  .tutorial-passos{display:grid;gap:12px;margin-top:16px}
+  .tutorial-passo{padding:14px;border:1px solid var(--fpbf-border);border-radius:10px;background:#faf8f4}
+  .tutorial-passo strong{color:var(--fpbf-primary)}
+  .fluxo-aviso{padding:12px 14px;border-radius:9px;background:#f8f5ef;border:1px solid var(--fpbf-border);font-size:13px;margin-bottom:14px}
+
 </style>
 </head>
 <body>
@@ -946,6 +958,15 @@
   <div class="painel-corpo" id="painel-corpo"></div>
 </div>
 
+
+<div class="modal-site-backdrop" id="modal-site-backdrop">
+  <div class="modal-site" role="dialog" aria-modal="true" aria-labelledby="modal-site-titulo">
+    <h2 id="modal-site-titulo">Aviso</h2>
+    <div id="modal-site-corpo"></div>
+    <div class="modal-acoes" id="modal-site-acoes"></div>
+  </div>
+</div>
+
 <script>
 
 // =============================================================
@@ -973,7 +994,8 @@ const STATE = {
   criteriosCache: [],
   submissaoAberta: null,
   submissoesCache: [],
-  totalGeralCache: 0
+  totalGeralCache: 0,
+  fluxo: { quemNotificaAutor: 'comissao' }
 };
 
 
@@ -1105,6 +1127,56 @@ function extrairIdDrive(url) {
 }
 
 
+
+function mostrarModalSite(titulo, mensagem, opcoes) {
+  const fundo = document.getElementById('modal-site-backdrop');
+  document.getElementById('modal-site-titulo').textContent = titulo || 'Aviso';
+  document.getElementById('modal-site-corpo').innerHTML = `<p>${escapeHtml(mensagem || '')}</p>`;
+  const acoes = document.getElementById('modal-site-acoes');
+  acoes.innerHTML = '<button class="btn btn-primary" style="width:auto;" id="modal-ok">OK</button>';
+  fundo.classList.add('visivel');
+  document.getElementById('modal-ok').onclick = () => fundo.classList.remove('visivel');
+}
+
+function confirmarModalSite(titulo, mensagem) {
+  return new Promise(resolve => {
+    const fundo = document.getElementById('modal-site-backdrop');
+    document.getElementById('modal-site-titulo').textContent = titulo || 'Confirmar';
+    document.getElementById('modal-site-corpo').innerHTML = `<p>${escapeHtml(mensagem || '')}</p>`;
+    const acoes = document.getElementById('modal-site-acoes');
+    acoes.innerHTML = '<button class="btn btn-secundario" style="width:auto;" id="modal-cancelar">Cancelar</button><button class="btn btn-primary" style="width:auto;" id="modal-confirmar">Confirmar</button>';
+    fundo.classList.add('visivel');
+    const fechar = valor => { fundo.classList.remove('visivel'); resolve(valor); };
+    document.getElementById('modal-cancelar').onclick = () => fechar(false);
+    document.getElementById('modal-confirmar').onclick = () => fechar(true);
+  });
+}
+
+function mostrarTutorialPrimeiroAcesso() {
+  if (!STATE.usuario || !STATE.usuario.email) return;
+  const chave = 'fpbf_tutorial_v1_' + STATE.usuario.email.toLowerCase();
+  if (localStorage.getItem(chave)) return;
+
+  const ehComissao = STATE.usuario.papel === 'Comissão';
+  const fundo = document.getElementById('modal-site-backdrop');
+  document.getElementById('modal-site-titulo').textContent = 'Como usar o FPBF Avalia';
+  document.getElementById('modal-site-corpo').innerHTML = `
+    <p>Este guia aparece apenas no seu primeiro acesso.</p>
+    <div class="tutorial-passos">
+      <div class="tutorial-passo"><strong>1. Abra um trabalho</strong><br>Clique na linha da submissão para visualizar o arquivo, dados e andamento.</div>
+      ${ehComissao
+        ? '<div class="tutorial-passo"><strong>2. Atribua avaliadores</strong><br>Ao atribuir um trabalho recebido, o status muda automaticamente para “Em análise”.</div><div class="tutorial-passo"><strong>3. Revise o resultado</strong><br>Quando a comissão controla a liberação, a proposta do avaliador fica interna até você liberar.</div>'
+        : '<div class="tutorial-passo"><strong>2. Dê as notas</strong><br>Avalie cada critério e escolha um resultado compatível: correção, aprovado com correções, aprovado ou reprovado.</div><div class="tutorial-passo"><strong>3. Parecer da comissão</strong><br>Use o único campo de parecer. Se a comissão controlar a liberação, seu texto ficará aguardando revisão; caso contrário, será publicado ao autor.</div>'}
+      <div class="tutorial-passo"><strong>4. Entenda os botões</strong><br>“Salvar avaliação para revisão da comissão” não publica nada. “Enviar resultado ao autor” ou “Liberar resultado ao autor” publica o status, atualiza o acompanhamento e envia o e-mail.</div>
+    </div>`;
+  document.getElementById('modal-site-acoes').innerHTML = '<button class="btn btn-primary" style="width:auto;" id="tutorial-entendi">Entendi</button>';
+  fundo.classList.add('visivel');
+  document.getElementById('tutorial-entendi').onclick = () => {
+    localStorage.setItem(chave, '1');
+    fundo.classList.remove('visivel');
+  };
+}
+
 // =============================================================
 // LOGIN / LOGOUT
 // =============================================================
@@ -1205,6 +1277,7 @@ function mostrarApp() {
 
   // um único round-trip pra tudo que a tela inicial precisa
   carregarPainelInicial();
+  setTimeout(mostrarTutorialPrimeiroAcesso, 250);
 
 }
 
@@ -1219,6 +1292,7 @@ async function carregarPainelInicial() {
 
     STATE.criteriosCache = resposta.criterios || [];
     if (resposta.usuarios) STATE.avaliadoresCache = resposta.usuarios;
+    if (resposta.fluxo) STATE.fluxo = resposta.fluxo;
     STATE.submissoesCache = resposta.submissoes || [];
     STATE.totalGeralCache = resposta.totalGeral || 0;
     salvarCacheLocal();
@@ -1379,7 +1453,7 @@ async function abrirDetalhe(eixo, codigo) {
       Promise.resolve(null)
     ]);
 
-    if (!detalhe.sucesso) { alert(detalhe.erro); return; }
+    if (!detalhe.sucesso) { mostrarModalSite('Não foi possível abrir', detalhe.erro); return; }
 
     STATE.submissaoAberta = detalhe;
     renderizarPainelDetalhe(detalhe);
@@ -1388,7 +1462,7 @@ async function abrirDetalhe(eixo, codigo) {
     document.getElementById('painel-detalhe').classList.add('visivel');
 
   } catch (erro) {
-    alert(erro.message);
+    mostrarModalSite('Ocorreu um erro', erro.message);
   }
 }
 
@@ -1478,7 +1552,7 @@ function renderizarPainelDetalhe(d) {
       html += `
         <div class="avaliacao-existente">
           <div><span class="avaliador-nome">${escapeHtml(a.avaliador)}</span> — <span class="nota-media">${a.notaMedia}</span></div>
-          ${a.comentarioGeral ? `<div style="margin-top:4px;">${escapeHtml(a.comentarioGeral)}</div>` : ''}
+          ${a.statusProposto ? `<div style="margin-top:6px;"><strong>Resultado proposto:</strong> ${badgeStatus(a.statusProposto)}</div>` : ''}${a.parecerProposto ? `<div style="margin-top:6px;"><strong>Parecer:</strong> ${escapeHtml(a.parecerProposto)}</div>` : ''}
         </div>
       `;
     });
@@ -1490,26 +1564,51 @@ function renderizarPainelDetalhe(d) {
     html += `<div class="bloco"><h3>${minhaAvaliacao ? 'Sua avaliação' : 'Avaliar este trabalho'}</h3><div id="form-avaliacao"></div></div>`;
   }
 
-  // ---- status / parecer (comissão + avaliador atribuído) ----
-  if (ehComissao || estouAtribuido) {
-    html += `
-      <div class="bloco">
-        <h3>Status da submissão</h3>
-        <div class="campo">
-          <select id="select-status">
-            ${['Recebido','Em análise','Correção solicitada','Aprovado com correções','Reenviado','Aprovado','Reprovado']
-              .map(s => `<option value="${s}" ${s === d.status ? 'selected' : ''}>${s}</option>`).join('')}
-          </select>
-        </div>
-        <div class="campo">
-          <textarea id="textarea-parecer" placeholder="Parecer / correções para o autor...">${escapeHtml(d.parecer || '')}</textarea>
-        </div>
-        <button class="btn btn-primary" style="width:auto;" onclick="salvarStatusUI('${d.eixo}','${d.codigo}')">Salvar status e parecer</button>
-      </div>
-    `;
+
+// ---- resultado / parecer único ----
+if (ehComissao || estouAtribuido) {
+  const modoComissao = STATE.fluxo && STATE.fluxo.quemNotificaAutor === 'comissao';
+  const statusPermitidos = ['Correção solicitada','Aprovado com correções','Aprovado','Reprovado'];
+  const proposta = !ehComissao && minhaAvaliacao ? minhaAvaliacao.statusProposto : '';
+  const parecerInicial = !ehComissao && minhaAvaliacao ? (minhaAvaliacao.parecerProposto || '') : (d.parecer || '');
+
+  let textoFluxo = '';
+  let textoBotao = '';
+  if (ehComissao) {
+    textoFluxo = modoComissao
+      ? 'A comissão controla a publicação. O autor e a página de acompanhamento só verão o resultado depois de clicar em “Liberar resultado ao autor”.'
+      : 'Os avaliadores podem publicar resultados. A comissão também pode corrigir ou publicar um resultado por aqui.';
+    textoBotao = 'Liberar resultado ao autor';
+  } else {
+    textoFluxo = modoComissao
+      ? 'Sua avaliação será salva para revisão da comissão. O autor ainda não verá o status nem receberá e-mail.'
+      : 'Ao enviar, o status será publicado na página de acompanhamento e o autor receberá o e-mail correspondente.';
+    textoBotao = modoComissao ? 'Salvar avaliação para revisão da comissão' : 'Enviar resultado ao autor';
   }
 
-  document.getElementById('painel-corpo').innerHTML = html;
+  html += `
+    <div class="bloco">
+      <h3>Resultado da avaliação</h3>
+      <div class="fluxo-aviso">${textoFluxo}</div>
+      <div class="campo">
+        <label>Status recomendado</label>
+        <select id="select-status">
+          <option value="">Selecione...</option>
+          ${statusPermitidos.map(s => `<option value="${s}" ${(proposta || d.status) === s ? 'selected' : ''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="campo">
+        <label>Parecer da comissão</label>
+        <textarea id="textarea-parecer" placeholder="Escreva aqui o parecer que poderá ser apresentado ao autor...">${escapeHtml(parecerInicial)}</textarea>
+      </div>
+      ${ehComissao
+        ? `<button class="btn btn-primary" style="width:auto;" onclick="publicarResultadoUI('${d.eixo}','${d.codigo}')">${textoBotao}</button>`
+        : ''}
+    </div>
+  `;
+}
+
+document.getElementById('painel-corpo').innerHTML = html;
 
   if (!ehComissao && estouAtribuido) {
     renderizarFormularioAvaliacao(d.eixo, d.codigo, minhaAvaliacao);
@@ -1524,25 +1623,36 @@ async function atribuirUI(eixo, codigo) {
     await chamar('atribuirAvaliador', { eixo, codigo, avaliadorEmail: email });
     abrirDetalhe(eixo, codigo);
     carregarSubmissoes();
-  } catch (erro) { alert(erro.message); }
+  } catch (erro) { mostrarModalSite('Ocorreu um erro', erro.message); }
 }
 
 async function removerAtribuicaoUI(eixo, codigo, avaliadorEmail) {
   try {
     await chamar('removerAtribuicao', { eixo, codigo, avaliadorEmail });
     abrirDetalhe(eixo, codigo);
-  } catch (erro) { alert(erro.message); }
+  } catch (erro) { mostrarModalSite('Ocorreu um erro', erro.message); }
 }
 
-async function salvarStatusUI(eixo, codigo) {
+
+async function publicarResultadoUI(eixo, codigo) {
   const novoStatus = document.getElementById('select-status').value;
-  const parecer = document.getElementById('textarea-parecer').value;
+  const parecer = document.getElementById('textarea-parecer').value.trim();
+  if (!novoStatus) return mostrarModalSite('Selecione o resultado', 'Escolha um status compatível antes de liberar o resultado.');
+
+  const ok = await confirmarModalSite(
+    'Liberar resultado ao autor?',
+    'Esta ação atualizará a página de acompanhamento e enviará o e-mail correspondente ao autor.'
+  );
+  if (!ok) return;
 
   try {
-    await chamar('atualizarStatusSubmissao', { eixo, codigo, novoStatus, parecer });
+    const resposta = await chamar('atualizarStatusSubmissao', { eixo, codigo, novoStatus, parecer });
+    if (!resposta || !resposta.sucesso) throw new Error((resposta && resposta.erro) || 'Não foi possível liberar o resultado.');
+    mostrarModalSite('Resultado liberado', 'O status foi publicado e o e-mail correspondente foi enviado ao autor.');
     fecharPainel();
+    invalidarCacheDados();
     carregarSubmissoes();
-  } catch (erro) { alert(erro.message); }
+  } catch (erro) { mostrarModalSite('Não foi possível liberar', erro.message); }
 }
 
 
@@ -1577,34 +1687,55 @@ function renderizarFormularioAvaliacao(eixo, codigo, avaliacaoExistente) {
     `;
   });
 
+  const modoComissao = STATE.fluxo && STATE.fluxo.quemNotificaAutor === 'comissao';
   html += `
-    <div class="campo">
-      <label>Comentário geral (opcional)</label>
-      <textarea id="comentario-avaliacao">${escapeHtml((avaliacaoExistente && avaliacaoExistente.comentarioGeral) || '')}</textarea>
-    </div>
     <button class="btn btn-primary" style="width:auto;" onclick="salvarAvaliacaoUI('${eixo}','${codigo}')">
-      ${avaliacaoExistente ? 'Atualizar avaliação' : 'Enviar avaliação'}
+      ${modoComissao ? 'Salvar avaliação para revisão da comissão' : 'Enviar resultado ao autor'}
     </button>
   `;
 
   container.innerHTML = html;
 }
 
-async function salvarAvaliacaoUI(eixo, codigo) {
 
+async function salvarAvaliacaoUI(eixo, codigo) {
   const notas = {};
   document.querySelectorAll('#form-avaliacao input[type="range"]').forEach(input => {
     notas[input.dataset.criterio] = Number(input.value);
   });
 
-  const comentarioGeral = document.getElementById('comentario-avaliacao').value;
+  const statusEl = document.getElementById('select-status');
+  const parecerEl = document.getElementById('textarea-parecer');
+  const novoStatus = statusEl ? statusEl.value : '';
+  const parecer = parecerEl ? parecerEl.value.trim() : '';
+
+  if (!novoStatus) {
+    return mostrarModalSite('Selecione o resultado', 'Escolha o status recomendado para concluir sua avaliação.');
+  }
+
+  const modoComissao = STATE.fluxo && STATE.fluxo.quemNotificaAutor === 'comissao';
+  const texto = modoComissao
+    ? 'Sua avaliação será enviada para revisão da comissão. O autor ainda não receberá o resultado.'
+    : 'O resultado será publicado para o autor e o e-mail correspondente será enviado.';
+  const ok = await confirmarModalSite('Concluir avaliação?', texto);
+  if (!ok) return;
 
   try {
-    await chamar('salvarAvaliacao', { eixo, codigo, notas, comentarioGeral });
-    alert('Avaliação salva com sucesso!');
+    const resposta = await chamar('salvarAvaliacao', {
+      eixo, codigo, notas, comentarioGeral: '', novoStatus, parecer
+    });
+    if (!resposta || !resposta.sucesso) throw new Error((resposta && resposta.erro) || 'Não foi possível salvar a avaliação.');
+
+    if (resposta.aguardandoComissao) {
+      mostrarModalSite('Avaliação salva', 'Sua avaliação foi registrada e está aguardando a liberação da comissão.');
+    } else {
+      mostrarModalSite('Resultado enviado', 'A avaliação foi registrada e o resultado foi publicado ao autor.');
+    }
+
     fecharPainel();
+    invalidarCacheDados();
     carregarSubmissoes();
-  } catch (erro) { alert(erro.message); }
+  } catch (erro) { mostrarModalSite('Erro ao salvar avaliação', erro.message); }
 }
 
 
@@ -1674,19 +1805,19 @@ document.getElementById('form-usuario').addEventListener('submit', async functio
 });
 
 async function desativarUsuarioUI(email) {
-  if (!confirm('Desativar este usuário? Ele não conseguirá mais entrar no sistema.')) return;
+  if (!(await confirmarModalSite('Desativar usuário?', 'Ele não conseguirá mais entrar no sistema.'))) return;
   try {
     await chamar('desativarUsuario', { emailAlvo: email });
     carregarUsuarios();
-  } catch (erro) { alert(erro.message); }
+  } catch (erro) { mostrarModalSite('Ocorreu um erro', erro.message); }
 }
 
 async function redefinirSenhaUI(email) {
-  if (!confirm('Gerar uma nova senha para ' + email + ' e enviar por e-mail?')) return;
+  if (!(await confirmarModalSite('Redefinir senha?', 'Uma nova senha será gerada e enviada para ' + email + '.'))) return;
   try {
     await chamar('redefinirSenha', { emailAlvo: email });
-    alert('Nova senha enviada por e-mail.');
-  } catch (erro) { alert(erro.message); }
+    mostrarModalSite('Senha redefinida', 'Uma nova senha foi enviada por e-mail.');
+  } catch (erro) { mostrarModalSite('Ocorreu um erro', erro.message); }
 }
 
 
