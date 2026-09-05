@@ -267,6 +267,21 @@
     display: flex;
     flex-direction: column;
     padding: 20px 14px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+    align-self: flex-start;
+    overflow: hidden;
+  }
+
+  .sidebar-nav {
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .sidebar-rodape {
+    flex-shrink: 0;
   }
 
   .sidebar-logo {
@@ -683,8 +698,15 @@
       align-items: center;
       padding: 10px 14px;
       overflow-x: auto;
+      overflow-y: hidden;
       border-right: none;
       border-bottom: 1px solid var(--fpbf-border);
+      height: auto;
+      min-height: 0;
+      align-self: stretch;
+      position: sticky;
+      top: 0;
+      z-index: 30;
     }
     .sidebar-logo { border-bottom: none; padding: 0 14px 0 0; margin: 0; border-right: 1px solid var(--fpbf-border); }
     .sidebar-nav { display: flex; gap: 4px; }
@@ -974,10 +996,10 @@
 // =============================================================
 
 // Cole aqui a URL do deploy (.../exec) do Code_Admin.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbyL6jGZmUND6o6yUAr5Equz4ILgsRED7D7CsN8UtgCsFaLawnb8IEJo_jQqAPa86F7x-w/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxgx7AqGoKDOqFVnkf2u-YW2Vv3IpUUJeMIjv0JQLoK3da_HJFqpL3BwwoewyM8mgF9/exec';
 
 const CHAVE_SESSAO = 'fpbf_avalia_sessao';
-const CHAVE_CACHE = 'fpbf_avalia_cache_v2';
+const CHAVE_CACHE = 'fpbf_avalia_cache_v3';
 const CACHE_TTL = 5 * 60 * 1000;
 
 const CORES_STATUS = {
@@ -1275,9 +1297,11 @@ function mostrarApp() {
   const isAvaliador = u.papel !== 'Comissão';
   document.getElementById('topbar-titulo').textContent = isAvaliador ? 'Meus Trabalhos' : 'Submissões';
 
-  // um único round-trip pra tudo que a tela inicial precisa
-  carregarPainelInicial();
-  setTimeout(mostrarTutorialPrimeiroAcesso, 250);
+  // Trabalhos podem aparecer do cache, mas critérios e regras de publicação
+  // são sempre sincronizados com o servidor antes do uso.
+  STATE.criteriosCache = [];
+  STATE.fluxo = { quemNotificaAutor: 'comissao' };
+  carregarPainelInicial().finally(() => setTimeout(mostrarTutorialPrimeiroAcesso, 250));
 
 }
 
@@ -1308,9 +1332,7 @@ function salvarCacheLocal() {
       salvoEm: Date.now(),
       email: STATE.usuario && STATE.usuario.email,
       submissoes: STATE.submissoesCache,
-      totalGeral: STATE.totalGeralCache,
-      criterios: STATE.criteriosCache,
-      usuarios: STATE.avaliadoresCache
+      totalGeral: STATE.totalGeralCache
     }));
   } catch (e) {}
 }
@@ -1321,8 +1343,8 @@ function carregarCacheLocal() {
     if (!c || c.email !== (STATE.usuario && STATE.usuario.email) || Date.now() - c.salvoEm > CACHE_TTL) return;
     STATE.submissoesCache = c.submissoes || [];
     STATE.totalGeralCache = c.totalGeral || 0;
-    STATE.criteriosCache = c.criterios || [];
-    STATE.avaliadoresCache = c.usuarios || [];
+    // Critérios, usuários e regras de publicação não são restaurados do cache.
+    // Eles precisam refletir imediatamente as alterações feitas pela comissão.
   } catch (e) {}
 }
 
@@ -1875,9 +1897,14 @@ document.getElementById('btn-salvar-criterios').addEventListener('click', async 
   const validos = STATE.criteriosCache.filter(c => c.nome && c.nome.trim());
 
   try {
-    await chamar('salvarCriterios', { criterios: validos });
-    STATE.criteriosCache = validos;
-    mostrarMensagem('criterios-mensagem', 'sucesso', 'Critérios salvos com sucesso!');
+    const resposta = await chamar('salvarCriterios', { criterios: validos });
+    if (!resposta || !resposta.sucesso) throw new Error((resposta && resposta.erro) || 'Não foi possível salvar os critérios.');
+    // Recarrega do servidor para obter os IDs definitivos e garantir que a própria
+    // comissão já esteja vendo exatamente a mesma configuração dos avaliadores.
+    const atualizados = await chamar('listarCriterios');
+    STATE.criteriosCache = (atualizados && atualizados.criterios) || [];
+    renderizarEditorCriterios();
+    mostrarMensagem('criterios-mensagem', 'sucesso', 'Critérios salvos e publicados para os avaliadores!');
   } catch (erro) {
     mostrarMensagem('criterios-mensagem', 'erro', erro.message);
   }
@@ -1909,8 +1936,12 @@ document.getElementById('btn-salvar-config').addEventListener('click', async fun
   };
 
   try {
-    await chamar('salvarConfiguracoes', { config });
-    mostrarMensagem('config-mensagem', 'sucesso', 'Configurações salvas!');
+    const resposta = await chamar('salvarConfiguracoes', { config });
+    if (!resposta || !resposta.sucesso) throw new Error((resposta && resposta.erro) || 'Não foi possível salvar as configurações.');
+    STATE.fluxo = { quemNotificaAutor: config.quemNotificaAutor };
+    // Remove qualquer cache legado para impedir que outra regra antiga seja reaproveitada.
+    try { localStorage.removeItem('fpbf_avalia_cache_v2'); } catch (e) {}
+    mostrarMensagem('config-mensagem', 'sucesso', 'Configurações salvas e publicadas! Novos acessos de avaliadores usarão esta regra.');
   } catch (erro) {
     mostrarMensagem('config-mensagem', 'erro', erro.message);
   }
