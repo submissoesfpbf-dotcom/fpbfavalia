@@ -254,6 +254,16 @@
   }
   .atribuido-tag.vazio { color: #bfb8ab; font-style: italic; }
 
+
+  .atribuicoes-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
+  .atribuicoes-toolbar select { min-width:260px; }
+  .atribuicoes-lista { display:grid; gap:8px; }
+  .atribuicao-item { display:grid; grid-template-columns:28px 1fr auto; gap:10px; align-items:center; padding:12px 14px; border:1px solid var(--fpbf-border); border-radius:10px; background:#fff; }
+  .atribuicao-item.ja-atribuido { background:#f4f2ef; opacity:.62; }
+  .atribuicao-item .meta { font-size:12px; color:var(--fpbf-muted); margin-top:3px; }
+  .atribuicao-item input[type="checkbox"] { width:17px; height:17px; }
+  .contador-selecao { font-size:12.5px; color:var(--fpbf-muted); margin-left:auto; }
+
   /* ============ APP (PÓS-LOGIN) ============ */
 
   #app { display: none; min-height: 100vh; }
@@ -853,6 +863,22 @@
         </div>
       </section>
 
+
+      <!-- ATRIBUIÇÕES EM LOTE (comissão) -->
+      <section class="secao" id="secao-atribuicoes">
+        <div class="card-form">
+          <h2>Atribuir trabalhos</h2>
+          <p style="font-size:13px; color:var(--fpbf-muted); margin-top:-8px; margin-bottom:16px;">Selecione vários trabalhos livres e atribua todos ao mesmo avaliador. Trabalhos já atribuídos aparecem em cinza e não podem ser selecionados quando o modo de avaliador único estiver ativo.</p>
+          <div class="atribuicoes-toolbar">
+            <select id="atrib-lote-avaliador"><option value="">Selecione o avaliador...</option></select>
+            <button type="button" class="btn btn-secundario" style="width:auto;" onclick="selecionarTodosLivres()">Selecionar livres</button>
+            <button type="button" class="btn btn-primary" style="width:auto;" id="btn-atribuir-lote" onclick="atribuirSelecionadosUI()">Atribuir selecionados</button>
+            <span class="contador-selecao" id="contador-atribuicoes">0 selecionados</span>
+          </div>
+          <div id="lista-atribuicoes" class="atribuicoes-lista"></div>
+        </div>
+      </section>
+
       <!-- AVALIADORES (comissão) -->
       <section class="secao" id="secao-avaliadores">
 
@@ -996,7 +1022,7 @@
 // =============================================================
 
 // Cole aqui a URL do deploy (.../exec) do Code_Admin.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbxJN8Fw8-ohAskDfMTrpxYNTYhdxhU8oZhYqPx1n1KcOYMH66J6MQfbp3i_aZ9ItZOOHA/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwEI9q4FVUUXy4dNbOJaFXxhzcYh94CXZVKtvnK_ZE9oh7BaNkrZQKg6ytH2kyiNkll/exec';
 
 const CHAVE_SESSAO = 'fpbf_avalia_sessao';
 const CHAVE_CACHE = 'fpbf_avalia_cache_v3';
@@ -1260,6 +1286,7 @@ document.getElementById('btn-sair').addEventListener('click', async function() {
 
 const SECOES_COMISSAO = [
   { id: 'submissoes', label: 'Submissões' },
+  { id: 'atribuicoes', label: 'Atribuições' },
   { id: 'avaliadores', label: 'Avaliadores' },
   { id: 'criterios', label: 'Critérios' },
   { id: 'configuracoes', label: 'Configurações' }
@@ -1317,6 +1344,8 @@ async function carregarPainelInicial() {
     STATE.criteriosCache = resposta.criterios || [];
     if (resposta.usuarios) STATE.avaliadoresCache = resposta.usuarios;
     if (resposta.fluxo) STATE.fluxo = resposta.fluxo;
+    // Confirma a regra em uma rota mínima própria, evitando qualquer valor antigo.
+    try { await sincronizarFluxoAvaliacao(); } catch (e) { console.error(e); }
     STATE.submissoesCache = resposta.submissoes || [];
     STATE.totalGeralCache = resposta.totalGeral || 0;
     salvarCacheLocal();
@@ -1363,6 +1392,7 @@ function aplicarFiltrosLocais() {
 
 const TITULOS_SECAO = {
   submissoes: ['Submissões', ''],
+  atribuicoes: ['Atribuições', 'Selecione e distribua vários trabalhos de uma vez'],
   avaliadores: ['Avaliadores', 'Cadastre e gerencie quem avalia cada eixo'],
   criterios: ['Critérios de avaliação', 'Monte o formulário que os avaliadores vão preencher'],
   configuracoes: ['Configurações', 'Regras gerais do sistema']
@@ -1384,6 +1414,7 @@ function irParaSecao(id) {
   document.getElementById('topbar-sub').textContent = TITULOS_SECAO[id][1] || '';
 
   if (id === 'submissoes') aplicarFiltrosLocais();
+  if (id === 'atribuicoes') renderizarAtribuicoes();
   if (id === 'avaliadores') carregarUsuarios();
   if (id === 'criterios') renderizarEditorCriterios();
   if (id === 'configuracoes') carregarConfiguracoes();
@@ -1467,9 +1498,17 @@ function renderizarSubmissoes(lista, totalGeral) {
 // PAINEL DE DETALHE (slide-over)
 // =============================================================
 
+async function sincronizarFluxoAvaliacao() {
+  const resposta = await chamar('obterFluxoAvaliacao');
+  if (resposta && resposta.sucesso && resposta.fluxo) STATE.fluxo = resposta.fluxo;
+  return STATE.fluxo;
+}
+
 async function abrirDetalhe(eixo, codigo) {
 
   try {
+    // Regra de publicação é sempre lida diretamente da aba Configuracoes.
+    await sincronizarFluxoAvaliacao();
     const [detalhe, avaliacoesOwn] = await Promise.all([
       chamar('obterSubmissaoDetalhe', { eixo, codigo }),
       Promise.resolve(null)
@@ -1635,6 +1674,62 @@ document.getElementById('painel-corpo').innerHTML = html;
   if (!ehComissao && estouAtribuido) {
     renderizarFormularioAvaliacao(d.eixo, d.codigo, minhaAvaliacao);
   }
+}
+
+
+function renderizarAtribuicoes() {
+  if (!STATE.usuario || STATE.usuario.papel !== 'Comissão') return;
+  const lista = document.getElementById('lista-atribuicoes');
+  const sel = document.getElementById('atrib-lote-avaliador');
+  if (!lista || !sel) return;
+
+  const avaliadores = (STATE.avaliadoresCache || []).filter(u => u.papel === 'Avaliador' && u.ativo);
+  sel.innerHTML = '<option value="">Selecione o avaliador...</option>' + avaliadores.map(u =>
+    `<option value="${escapeHtml(u.email)}">${escapeHtml(u.nome)} — ${escapeHtml(u.email)}</option>`
+  ).join('');
+
+  const multiplos = STATE.fluxo && STATE.fluxo.permitirMultiplosAvaliadores === 'true';
+  lista.innerHTML = (STATE.submissoesCache || []).map((s, i) => {
+    const ja = s.atribuidoPara && s.atribuidoPara.length > 0;
+    const bloqueado = ja && !multiplos;
+    return `<label class="atribuicao-item ${bloqueado ? 'ja-atribuido' : ''}">
+      <input type="checkbox" class="chk-atrib-lote" data-eixo="${escapeHtml(s.eixo)}" data-codigo="${escapeHtml(s.codigo)}" ${bloqueado ? 'disabled' : ''} onchange="atualizarContadorAtribuicoes()">
+      <div><strong>${escapeHtml(s.codigo)} — ${escapeHtml(s.titulo)}</strong><div class="meta">${escapeHtml(s.eixo)} · ${escapeHtml(s.modalidade)} · ${escapeHtml(s.status)}</div></div>
+      <div style="font-size:12px; text-align:right;">${ja ? 'Já atribuído: ' + s.atribuidoPara.map(escapeHtml).join(', ') : '<span style="color:var(--fpbf-success);">Livre</span>'}</div>
+    </label>`;
+  }).join('') || '<div class="estado-vazio">Nenhum trabalho disponível.</div>';
+  atualizarContadorAtribuicoes();
+}
+
+function atualizarContadorAtribuicoes() {
+  const n = document.querySelectorAll('.chk-atrib-lote:checked').length;
+  const el = document.getElementById('contador-atribuicoes');
+  if (el) el.textContent = `${n} selecionado${n === 1 ? '' : 's'}`;
+}
+
+function selecionarTodosLivres() {
+  document.querySelectorAll('.chk-atrib-lote:not(:disabled)').forEach(c => c.checked = true);
+  atualizarContadorAtribuicoes();
+}
+
+async function atribuirSelecionadosUI() {
+  const avaliadorEmail = document.getElementById('atrib-lote-avaliador').value;
+  const itens = [...document.querySelectorAll('.chk-atrib-lote:checked')].map(c => ({eixo:c.dataset.eixo, codigo:c.dataset.codigo}));
+  if (!avaliadorEmail) return mostrarModalSite('Selecione o avaliador', 'Escolha quem receberá os trabalhos selecionados.');
+  if (!itens.length) return mostrarModalSite('Selecione os trabalhos', 'Marque pelo menos um trabalho livre.');
+
+  const ok = await confirmarModalSite('Confirmar atribuição?', `Você vai atribuir ${itens.length} trabalho${itens.length === 1 ? '' : 's'} ao avaliador selecionado.`);
+  if (!ok) return;
+
+  try {
+    const r = await chamar('atribuirAvaliadorEmLote', { itens, avaliadorEmail });
+    if (!r || !r.sucesso) throw new Error((r && r.erro) || 'Não foi possível concluir a atribuição.');
+    invalidarCacheDados();
+    await carregarSubmissoes();
+    await sincronizarFluxoAvaliacao();
+    renderizarAtribuicoes();
+    mostrarModalSite('Atribuição concluída', `${r.atribuidos || 0} trabalho${r.atribuidos === 1 ? '' : 's'} atribuído${r.atribuidos === 1 ? '' : 's'} com sucesso.` + ((r.ignorados || []).length ? ` ${r.ignorados.length} já estava(m) atribuído(s) e foi(ram) mantido(s).` : ''));
+  } catch (e) { mostrarModalSite('Erro na atribuição', e.message); }
 }
 
 async function atribuirUI(eixo, codigo) {
@@ -1938,7 +2033,8 @@ document.getElementById('btn-salvar-config').addEventListener('click', async fun
   try {
     const resposta = await chamar('salvarConfiguracoes', { config });
     if (!resposta || !resposta.sucesso) throw new Error((resposta && resposta.erro) || 'Não foi possível salvar as configurações.');
-    STATE.fluxo = { quemNotificaAutor: config.quemNotificaAutor };
+    STATE.fluxo = Object.assign({}, resposta.config || config);
+    try { await sincronizarFluxoAvaliacao(); } catch (e) {}
     // Remove qualquer cache legado para impedir que outra regra antiga seja reaproveitada.
     try { localStorage.removeItem('fpbf_avalia_cache_v2'); } catch (e) {}
     mostrarMensagem('config-mensagem', 'sucesso', 'Configurações salvas e publicadas! Novos acessos de avaliadores usarão esta regra.');
