@@ -269,12 +269,24 @@
 
 
   .atribuicoes-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
-  .atribuicoes-toolbar select { min-width:260px; }
+  .atribuicoes-toolbar select { min-width:250px; }
+  .atribuicoes-resumo { display:none; margin:0 0 16px; padding:15px 16px; border:1px solid var(--fpbf-border); border-radius:12px; background:#fcfbf9; }
+  .atribuicoes-resumo.ativo { display:block; }
+  .resumo-carga { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+  .resumo-numero { min-width:126px; padding:10px 12px; border:1px solid var(--fpbf-border); border-radius:10px; background:#fff; }
+  .resumo-numero strong { display:block; font-size:20px; line-height:1.1; color:var(--fpbf-text); }
+  .resumo-numero span { display:block; margin-top:3px; font-size:11.5px; color:var(--fpbf-muted); }
+  .resumo-estados { display:flex; gap:7px; flex-wrap:wrap; align-items:center; }
+  .estado-contagem { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border-radius:999px; border:1px solid var(--fpbf-border); background:#fff; font-size:11.5px; color:var(--fpbf-muted); }
+  .estado-contagem strong { font-size:12px; color:var(--fpbf-text); }
   .atribuicoes-lista { display:grid; gap:8px; }
   .atribuicao-item { display:grid; grid-template-columns:28px 1fr auto; gap:10px; align-items:center; padding:12px 14px; border:1px solid var(--fpbf-border); border-radius:10px; background:#fff; }
   .atribuicao-item.ja-atribuido { background:#f4f2ef; opacity:.62; }
+  .atribuicao-item.conflito-autoria { background:#fff1f2; border-color:#e5a3aa; opacity:1; }
+  .atribuicao-item.conflito-autoria strong { color:#8b1e2d; }
   .atribuicao-item .meta { font-size:12px; color:var(--fpbf-muted); margin-top:3px; }
   .atribuicao-item input[type="checkbox"] { width:17px; height:17px; }
+  .alerta-conflito { font-size:11.5px; color:#8b1e2d; font-weight:700; text-align:right; max-width:220px; }
   .contador-selecao { font-size:12.5px; color:var(--fpbf-muted); margin-left:auto; }
 
   /* ============ APP (PÓS-LOGIN) ============ */
@@ -1126,11 +1138,20 @@
           <h2>Atribuir trabalhos</h2>
           <p style="font-size:13px; color:var(--fpbf-muted); margin-top:-8px; margin-bottom:16px;">Selecione vários trabalhos livres e atribua todos ao(à) mesmo(a) avaliador(a). Trabalhos já atribuídos aparecem em cinza e não podem ser selecionados quando o modo de avaliador(a) único(a) estiver ativo.</p>
           <div class="atribuicoes-toolbar">
-            <select id="atrib-lote-avaliador" onchange="renderizarListaAtribuicoesPorAvaliador()"><option value="">Selecione o(a) avaliador(a)(a)...</option></select>
+            <select id="atrib-lote-eixo" onchange="atualizarFiltroAvaliadoresPorEixo()">
+              <option value="">Selecione o eixo...</option>
+              <option value="Eixo 1">Eixo 1</option>
+              <option value="Eixo 2">Eixo 2</option>
+              <option value="Eixo 3">Eixo 3</option>
+              <option value="Eixo 4">Eixo 4</option>
+              <option value="Eixo 5">Eixo 5</option>
+            </select>
+            <select id="atrib-lote-avaliador" onchange="renderizarListaAtribuicoesPorAvaliador()" disabled><option value="">Selecione o eixo primeiro...</option></select>
             <button type="button" class="btn btn-secundario" style="width:auto;" onclick="selecionarTodosLivres()">Selecionar livres</button>
             <button type="button" class="btn btn-primary" style="width:auto;" id="btn-atribuir-lote" onclick="atribuirSelecionadosUI()">Atribuir selecionados</button>
             <span class="contador-selecao" id="contador-atribuicoes">0 selecionados</span>
           </div>
+          <div id="resumo-avaliador-atribuicoes" class="atribuicoes-resumo"></div>
           <div id="lista-atribuicoes" class="atribuicoes-lista"></div>
         </div>
       </section>
@@ -1278,7 +1299,7 @@
 // =============================================================
 
 // Cole aqui a URL do deploy (.../exec) do Code_Admin.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbxn6GvKzcZuJf9nq30-P5N1oHqFwaDJmrzk4idgWxD93_ZQfuRndcI11GPyzjR0hJHO/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx8bvr2ErxN_0rBd4OAFk6E5Z1zEZD-hToyHPP5_q4cfoDFBinl5YDiuGmAa4YxEPs/exec';
 
 const CHAVE_SESSAO = 'fpbf_avalia_sessao';
 const CHAVE_CACHE = 'fpbf_avalia_cache_v3';
@@ -1850,8 +1871,12 @@ function renderizarPainelDetalhe(d) {
   // ---- atribuição (só comissão) ----
   if (ehComissao) {
     const opcoesAvaliadores = STATE.avaliadoresCache
-      .filter(u => u.papel === 'Avaliador' && u.ativo)
-      .map(u => `<option value="${u.email}">${escapeHtml(u.nome)}</option>`).join('');
+      .filter(u => u.papel === 'Avaliador' && u.ativo && avaliadorPodeNoEixoUI(u, d.eixo))
+      .map(u => {
+        const conflito = avaliadorConflitaComSubmissaoUI(u, d);
+        const complemento = conflito ? ' — possível conflito de autoria' : '';
+        return `<option value="${escapeHtml(u.email)}" ${conflito ? 'disabled' : ''}>${escapeHtml(u.nome)}${escapeHtml(complemento)}</option>`;
+      }).join('');
 
     html += `
       <div class="bloco">
@@ -1957,56 +1982,153 @@ function normalizarEixosAvaliador(valor) {
   return texto.split(',').map(v => v.trim()).filter(Boolean);
 }
 
+function avaliadorPodeNoEixoUI(avaliador, eixo) {
+  const eixos = normalizarEixosAvaliador(avaliador && avaliador.eixos);
+  return eixos.some(e => String(e).toLowerCase() === 'todos') || eixos.includes(String(eixo || '').trim());
+}
+
+function normalizarIdentidadeUI(valor) {
+  return String(valor || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9@._ -]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function avaliadorConflitaComSubmissaoUI(avaliador, submissao) {
+  if (!avaliador || !submissao) return false;
+  const emailAvaliador = normalizarIdentidadeUI(avaliador.email);
+  const nomeAvaliador = normalizarIdentidadeUI(avaliador.nome);
+  const autores = normalizarIdentidadeUI(Array.isArray(submissao.autores) ? submissao.autores.join('; ') : submissao.autores);
+  const emailAutor = normalizarIdentidadeUI(submissao.email);
+
+  if (emailAvaliador && emailAutor && emailAvaliador === emailAutor) return true;
+  if (emailAvaliador && autores.includes(emailAvaliador)) return true;
+  if (nomeAvaliador && nomeAvaliador.length >= 6 && autores && (autores.includes(nomeAvaliador) || nomeAvaliador.includes(autores))) return true;
+  const localEmail = (emailAvaliador.split('@')[0] || '');
+  if (localEmail.length >= 5 && autores.includes(localEmail)) return true;
+  return false;
+}
+
+function obterEstatisticasAvaliadorUI(email) {
+  email = String(email || '').trim().toLowerCase();
+  const estados = {};
+  let atribuidos = 0;
+  let avaliados = 0;
+  (STATE.submissoesCache || []).forEach(s => {
+    const minhas = (s.atribuicoesResumo || []).filter(a => String(a.email || '').trim().toLowerCase() === email);
+    minhas.forEach(a => {
+      atribuidos++;
+      const sa = String(a.statusAvaliacao || '').trim().toLowerCase();
+      if (sa === 'concluída' || sa === 'concluida') avaliados++;
+      const status = String(s.status || 'Sem status').trim() || 'Sem status';
+      estados[status] = (estados[status] || 0) + 1;
+    });
+  });
+  return { atribuidos, avaliados, pendentes: Math.max(0, atribuidos - avaliados), estados };
+}
+
+function renderizarResumoAvaliadorUI(avaliador) {
+  const box = document.getElementById('resumo-avaliador-atribuicoes');
+  if (!box) return;
+  if (!avaliador) {
+    box.classList.remove('ativo');
+    box.innerHTML = '';
+    return;
+  }
+  const stats = obterEstatisticasAvaliadorUI(avaliador.email);
+  const ordem = ['Recebido', 'Em análise', 'Correção solicitada', 'Reenviado', 'Aprovado', 'Reprovado'];
+  const extras = Object.keys(stats.estados).filter(s => !ordem.includes(s));
+  const estados = ordem.concat(extras);
+  box.innerHTML = `
+    <div style="font-size:13px; font-weight:700; margin-bottom:10px;">Carga atual de ${escapeHtml(avaliador.nome)} <span style="font-weight:400; color:var(--fpbf-muted);">(todos os eixos)</span></div>
+    <div class="resumo-carga">
+      <div class="resumo-numero"><strong>${stats.atribuidos}</strong><span>trabalhos atribuídos</span></div>
+      <div class="resumo-numero"><strong>${stats.avaliados}</strong><span>avaliações concluídas</span></div>
+      <div class="resumo-numero"><strong>${stats.pendentes}</strong><span>avaliações pendentes</span></div>
+    </div>
+    <div style="font-size:11.5px; color:var(--fpbf-muted); margin-bottom:7px;">Estado atual dos trabalhos atribuídos</div>
+    <div class="resumo-estados">${estados.map(status => `<span class="estado-contagem">${escapeHtml(status)} <strong>${stats.estados[status] || 0}</strong></span>`).join('')}</div>
+  `;
+  box.classList.add('ativo');
+}
+
 function renderizarAtribuicoes() {
   if (!STATE.usuario || STATE.usuario.papel !== 'Comissão') return;
+  atualizarFiltroAvaliadoresPorEixo(true);
+}
+
+function atualizarFiltroAvaliadoresPorEixo(preservarSelecao) {
+  const eixoSel = document.getElementById('atrib-lote-eixo');
   const sel = document.getElementById('atrib-lote-avaliador');
-  if (!sel) return;
-
-  const valorAtual = sel.value;
-  const avaliadores = (STATE.avaliadoresCache || []).filter(u => u.papel === 'Avaliador' && u.ativo);
-  sel.innerHTML = '<option value="">Selecione o(a) avaliador(a)(a)...</option>' + avaliadores.map(u =>
-    `<option value="${escapeHtml(u.email)}">${escapeHtml(u.nome)} — ${escapeHtml(u.email)}</option>`
-  ).join('');
-  if (avaliadores.some(u => u.email === valorAtual)) sel.value = valorAtual;
-
+  const lista = document.getElementById('lista-atribuicoes');
+  if (!eixoSel || !sel) return;
+  const eixo = String(eixoSel.value || '').trim();
+  const valorAtual = preservarSelecao ? String(sel.value || '').trim().toLowerCase() : '';
+  if (!eixo) {
+    sel.disabled = true;
+    sel.innerHTML = '<option value="">Selecione o eixo primeiro...</option>';
+    if (lista) lista.innerHTML = '<div class="estado-vazio">Selecione um eixo para visualizar somente os(as) avaliadores(as) cadastrados(as) nele.</div>';
+    renderizarResumoAvaliadorUI(null);
+    atualizarContadorAtribuicoes();
+    return;
+  }
+  const avaliadores = (STATE.avaliadoresCache || []).filter(u => u.papel === 'Avaliador' && u.ativo && avaliadorPodeNoEixoUI(u, eixo));
+  sel.disabled = false;
+  sel.innerHTML = '<option value="">Selecione o(a) avaliador(a)...</option>' + avaliadores.map(u => {
+    const stats = obterEstatisticasAvaliadorUI(u.email);
+    return `<option value="${escapeHtml(u.email)}">${escapeHtml(u.nome)} — ${stats.atribuidos} atribuídos · ${stats.avaliados} avaliados</option>`;
+  }).join('');
+  if (valorAtual && avaliadores.some(u => String(u.email || '').trim().toLowerCase() === valorAtual)) sel.value = valorAtual;
   renderizarListaAtribuicoesPorAvaliador();
 }
 
 function renderizarListaAtribuicoesPorAvaliador() {
   const lista = document.getElementById('lista-atribuicoes');
   const sel = document.getElementById('atrib-lote-avaliador');
-  if (!lista || !sel) return;
-
+  const eixoSel = document.getElementById('atrib-lote-eixo');
+  if (!lista || !sel || !eixoSel) return;
+  const eixo = String(eixoSel.value || '').trim();
   const email = String(sel.value || '').trim().toLowerCase();
-  if (!email) {
-    lista.innerHTML = '<div class="estado-vazio">Selecione primeiro um avaliador(a) para ver apenas os trabalhos dos eixos em que ele(a) está alocado(a).</div>';
+  if (!eixo) {
+    lista.innerHTML = '<div class="estado-vazio">Selecione primeiro um eixo.</div>';
+    renderizarResumoAvaliadorUI(null);
     atualizarContadorAtribuicoes();
     return;
   }
-
+  if (!email) {
+    lista.innerHTML = '<div class="estado-vazio">Agora selecione um(a) avaliador(a) cadastrado(a) neste eixo.</div>';
+    renderizarResumoAvaliadorUI(null);
+    atualizarContadorAtribuicoes();
+    return;
+  }
   const avaliador = (STATE.avaliadoresCache || []).find(u => String(u.email || '').trim().toLowerCase() === email);
   if (!avaliador) {
     lista.innerHTML = '<div class="estado-vazio">Avaliador(a) não encontrado(a).</div>';
+    renderizarResumoAvaliadorUI(null);
     atualizarContadorAtribuicoes();
     return;
   }
-
-  const eixosAvaliador = normalizarEixosAvaliador(avaliador.eixos);
-  const todosEixos = eixosAvaliador.some(e => String(e).toLowerCase() === 'todos');
-  const trabalhosCompativeis = (STATE.submissoesCache || []).filter(s =>
-    todosEixos || eixosAvaliador.includes(String(s.eixo || '').trim())
-  );
-
+  renderizarResumoAvaliadorUI(avaliador);
+  const trabalhosCompativeis = (STATE.submissoesCache || []).filter(s => String(s.eixo || '').trim() === eixo);
   const multiplos = STATE.fluxo && STATE.fluxo.permitirMultiplosAvaliadores === 'true';
   lista.innerHTML = trabalhosCompativeis.map(s => {
     const ja = s.atribuidoPara && s.atribuidoPara.length > 0;
-    const bloqueado = ja && !multiplos;
-    return `<label class="atribuicao-item ${bloqueado ? 'ja-atribuido' : ''}">
+    const conflito = avaliadorConflitaComSubmissaoUI(avaliador, s);
+    const bloqueadoAtribuicao = ja && !multiplos;
+    const bloqueado = conflito || bloqueadoAtribuicao;
+    const classes = [bloqueadoAtribuicao ? 'ja-atribuido' : '', conflito ? 'conflito-autoria' : ''].filter(Boolean).join(' ');
+    let lateral = '';
+    if (conflito) lateral = '<div class="alerta-conflito">⚠ Possível conflito de autoria<br><span style="font-weight:400;">não pode ser atribuído</span></div>';
+    else if (ja) lateral = `<div style="font-size:12px; text-align:right;">Já atribuído: ${s.atribuidoPara.map(escapeHtml).join(', ')}</div>`;
+    else lateral = '<div style="font-size:12px; text-align:right;"><span style="color:var(--fpbf-success);">Livre</span></div>';
+    return `<label class="atribuicao-item ${classes}">
       <input type="checkbox" class="chk-atrib-lote" data-eixo="${escapeHtml(s.eixo)}" data-codigo="${escapeHtml(s.codigo)}" ${bloqueado ? 'disabled' : ''} onchange="atualizarContadorAtribuicoes()">
-      <div><strong>${escapeHtml(s.codigo)} — ${escapeHtml(s.titulo)}</strong><div class="meta">${escapeHtml(s.eixo)} · ${escapeHtml(s.modalidade)} · ${escapeHtml(s.status)}</div></div>
-      <div style="font-size:12px; text-align:right;">${ja ? 'Já atribuído: ' + s.atribuidoPara.map(escapeHtml).join(', ') : '<span style="color:var(--fpbf-success);">Livre</span>'}</div>
+      <div><strong>${escapeHtml(s.codigo)} — ${escapeHtml(s.titulo)}</strong><div class="meta">${escapeHtml(s.eixo)} · ${escapeHtml(s.modalidade)} · ${escapeHtml(s.status)} · Autores: ${escapeHtml((s.autores || []).join('; '))}</div></div>
+      ${lateral}
     </label>`;
-  }).join('') || '<div class="estado-vazio">Nenhum trabalho disponível nos eixos deste avaliador(a).</div>';
+  }).join('') || '<div class="estado-vazio">Nenhum trabalho encontrado neste eixo.</div>';
   atualizarContadorAtribuicoes();
 }
 
@@ -2038,7 +2160,8 @@ async function atribuirSelecionadosUI() {
     await sincronizarFluxoAvaliacao();
     renderizarAtribuicoes();
     const msgEmail = r.emailEnviado === false ? ' A atribuição foi salva, mas o e-mail de notificação não pôde ser enviado.' : (r.emailEnviado === true ? ' O(a) avaliador(a) foi notificado(a) por e-mail.' : '');
-    mostrarModalSite('Atribuição concluída', `${r.atribuidos || 0} trabalho${r.atribuidos === 1 ? '' : 's'} atribuído${r.atribuidos === 1 ? '' : 's'} com sucesso.` + ((r.ignorados || []).length ? ` ${r.ignorados.length} já estava(m) atribuído(s) e foi(ram) mantido(s).` : '') + msgEmail);
+    const msgConflitos = (r.conflitosAutoria || []).length ? ` ${(r.conflitosAutoria || []).length} trabalho${r.conflitosAutoria.length === 1 ? '' : 's'} não ${r.conflitosAutoria.length === 1 ? 'foi' : 'foram'} atribuído${r.conflitosAutoria.length === 1 ? '' : 's'} por possível conflito de autoria.` : '';
+    mostrarModalSite('Atribuição concluída', `${r.atribuidos || 0} trabalho${r.atribuidos === 1 ? '' : 's'} atribuído${r.atribuidos === 1 ? '' : 's'} com sucesso.` + ((r.ignorados || []).length ? ` ${r.ignorados.length} já estava(m) atribuído(s) e foi(ram) mantido(s).` : '') + msgConflitos + msgEmail);
   } catch (e) { mostrarModalSite('Erro na atribuição', e.message); }
 }
 
