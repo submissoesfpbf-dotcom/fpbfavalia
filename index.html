@@ -2182,7 +2182,7 @@ function gerarDistribuicaoUniformeUI() {
   if (!avaliadores.length) return mostrarModalSite('Sem avaliadores(as)', 'Não há avaliadores(as) ativos(as) cadastrados(as) neste eixo.');
 
   // A distribuição automática trabalha somente com trabalhos ainda sem nenhuma atribuição.
-  // Assim, novas rodadas equilibram apenas o que chegou depois, levando em conta a carga já existente.
+  // O equilíbrio considera a carga GERAL de cada avaliador(a), somando todos os eixos.
   const trabalhos = (STATE.submissoesCache || [])
     .filter(s => String(s.eixo || '').trim() === eixo && !(s.atribuidoPara && s.atribuidoPara.length))
     .slice()
@@ -2190,12 +2190,10 @@ function gerarDistribuicaoUniformeUI() {
 
   if (!trabalhos.length) return mostrarModalSite('Nada para distribuir', 'Todos os trabalhos deste eixo já possuem atribuição.');
 
-  const cargaEixo = {};
   const cargaTotal = {};
   const propostaExtra = {};
   avaliadores.forEach(a => {
     const email = String(a.email || '').trim().toLowerCase();
-    cargaEixo[email] = obterCargaAvaliadorNoEixoUI(email, eixo);
     cargaTotal[email] = obterEstatisticasAvaliadorUI(email).atribuidos;
     propostaExtra[email] = 0;
   });
@@ -2205,10 +2203,9 @@ function gerarDistribuicaoUniformeUI() {
     candidatos.sort((a,b) => {
       const ea = String(a.email || '').trim().toLowerCase();
       const eb = String(b.email || '').trim().toLowerCase();
-      const ca = (cargaEixo[ea] || 0) + (propostaExtra[ea] || 0);
-      const cb = (cargaEixo[eb] || 0) + (propostaExtra[eb] || 0);
+      const ca = (cargaTotal[ea] || 0) + (propostaExtra[ea] || 0);
+      const cb = (cargaTotal[eb] || 0) + (propostaExtra[eb] || 0);
       if (ca !== cb) return ca - cb;
-      if ((cargaTotal[ea] || 0) !== (cargaTotal[eb] || 0)) return (cargaTotal[ea] || 0) - (cargaTotal[eb] || 0);
       return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
     });
     const escolhido = candidatos[0] || null;
@@ -2216,23 +2213,23 @@ function gerarDistribuicaoUniformeUI() {
     return { trabalho, avaliadorEmail: escolhido ? String(escolhido.email || '').trim().toLowerCase() : '' };
   });
 
-  renderizarPreviewDistribuicaoUniformeUI(eixo, avaliadores, proposta, cargaEixo);
+  renderizarPreviewDistribuicaoUniformeUI(eixo, avaliadores, proposta, cargaTotal);
 }
 
-function renderizarPreviewDistribuicaoUniformeUI(eixo, avaliadores, proposta, cargaEixo) {
+function renderizarPreviewDistribuicaoUniformeUI(eixo, avaliadores, proposta, cargaTotal) {
   const box = document.getElementById('distribuicao-uniforme-preview');
   if (!box) return;
   box.dataset.eixo = eixo;
   box._avaliadores = avaliadores;
   box._proposta = proposta;
-  box._cargaEixo = cargaEixo;
+  box._cargaTotal = cargaTotal;
 
   const linhas = proposta.map((p, idx) => {
     const elegiveis = avaliadoresElegiveisParaTrabalhoUI(avaliadores, p.trabalho);
     const opcoes = elegiveis.map(a => {
       const email = String(a.email || '').trim().toLowerCase();
       const sel = email === p.avaliadorEmail ? ' selected' : '';
-      return `<option value="${escapeHtml(email)}"${sel}>${escapeHtml(a.nome)} — ${cargaEixo[email] || 0} atual(is) no eixo</option>`;
+      return `<option value="${escapeHtml(email)}"${sel}>${escapeHtml(a.nome)} — ${cargaTotal[email] || 0} atribuído(s) no total</option>`;
     }).join('');
     const sem = !elegiveis.length;
     return `<div class="distribuicao-linha ${sem ? 'sem-opcao' : ''}">
@@ -2245,7 +2242,7 @@ function renderizarPreviewDistribuicaoUniformeUI(eixo, avaliadores, proposta, ca
 
   box.innerHTML = `
     <div class="distribuicao-uniforme-topo">
-      <div><h3>Prévia da distribuição uniforme</h3><div style="font-size:13px;color:var(--fpbf-muted);max-width:760px;line-height:1.55;">Nada será atribuído ainda. O sistema considera a carga que cada avaliador(a) já possui neste eixo e distribui apenas os trabalhos ainda livres. Você pode alterar qualquer avaliador(a) abaixo antes de confirmar.</div></div>
+      <div><h3>Prévia da distribuição uniforme</h3><div style="font-size:13px;color:var(--fpbf-muted);max-width:760px;line-height:1.55;">Nada será atribuído ainda. O sistema considera a carga geral de cada avaliador(a), somando os trabalhos já atribuídos em <strong>todos os eixos</strong>, e distribui apenas os trabalhos ainda livres do eixo selecionado. Você pode alterar qualquer avaliador(a) abaixo antes de confirmar.</div></div>
       <button type="button" class="btn btn-secundario" style="width:auto;" onclick="fecharDistribuicaoUniformeUI()">Fechar prévia</button>
     </div>
     <div id="resumo-distribuicao-uniforme" class="distribuicao-uniforme-resumo"></div>
@@ -2263,7 +2260,7 @@ function atualizarPreviewDistribuicaoUniformeUI() {
   const box = document.getElementById('distribuicao-uniforme-preview');
   if (!box || !box.classList.contains('ativo')) return;
   const avaliadores = box._avaliadores || [];
-  const cargaEixo = box._cargaEixo || {};
+  const cargaTotal = box._cargaTotal || {};
   const novos = {};
   avaliadores.forEach(a => novos[String(a.email || '').trim().toLowerCase()] = 0);
   box.querySelectorAll('.select-distribuicao-uniforme').forEach(sel => {
@@ -2274,9 +2271,9 @@ function atualizarPreviewDistribuicaoUniformeUI() {
   if (!resumo) return;
   resumo.innerHTML = avaliadores.map(a => {
     const email = String(a.email || '').trim().toLowerCase();
-    const atual = cargaEixo[email] || 0;
+    const atual = cargaTotal[email] || 0;
     const add = novos[email] || 0;
-    return `<div class="distribuicao-carga"><strong>${escapeHtml(a.nome)}</strong>${atual} atual(is) + ${add} novo(s) → <b>${atual + add}</b> no eixo</div>`;
+    return `<div class="distribuicao-carga"><strong>${escapeHtml(a.nome)}</strong>${atual} atual(is) em todos os eixos + ${add} novo(s) → <b>${atual + add}</b> no total</div>`;
   }).join('');
 }
 
