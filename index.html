@@ -1278,7 +1278,7 @@
 // =============================================================
 
 // Cole aqui a URL do deploy (.../exec) do Code_Admin.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbxjaWuV1PqgFVrOzlfUD2RUHgNsrrxStG_t7F5sCMq0MY5f9dbS6kK8N5pGpw9-O_68XQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxn6GvKzcZuJf9nq30-P5N1oHqFwaDJmrzk4idgWxD93_ZQfuRndcI11GPyzjR0hJHO/exec';
 
 const CHAVE_SESSAO = 'fpbf_avalia_sessao';
 const CHAVE_CACHE = 'fpbf_avalia_cache_v3';
@@ -2037,7 +2037,8 @@ async function atribuirSelecionadosUI() {
     await carregarSubmissoes();
     await sincronizarFluxoAvaliacao();
     renderizarAtribuicoes();
-    mostrarModalSite('Atribuição concluída', `${r.atribuidos || 0} trabalho${r.atribuidos === 1 ? '' : 's'} atribuído${r.atribuidos === 1 ? '' : 's'} com sucesso.` + ((r.ignorados || []).length ? ` ${r.ignorados.length} já estava(m) atribuído(s) e foi(ram) mantido(s).` : ''));
+    const msgEmail = r.emailEnviado === false ? ' A atribuição foi salva, mas o e-mail de notificação não pôde ser enviado.' : (r.emailEnviado === true ? ' O(a) avaliador(a) foi notificado(a) por e-mail.' : '');
+    mostrarModalSite('Atribuição concluída', `${r.atribuidos || 0} trabalho${r.atribuidos === 1 ? '' : 's'} atribuído${r.atribuidos === 1 ? '' : 's'} com sucesso.` + ((r.ignorados || []).length ? ` ${r.ignorados.length} já estava(m) atribuído(s) e foi(ram) mantido(s).` : '') + msgEmail);
   } catch (e) { mostrarModalSite('Erro na atribuição', e.message); }
 }
 
@@ -2046,9 +2047,12 @@ async function atribuirUI(eixo, codigo) {
   if (!email) return;
 
   try {
-    await chamar('atribuirAvaliador', { eixo, codigo, avaliadorEmail: email });
+    const r = await chamar('atribuirAvaliador', { eixo, codigo, avaliadorEmail: email });
     abrirDetalhe(eixo, codigo);
     carregarSubmissoes();
+    if (r && r.emailEnviado === false) {
+      mostrarModalSite('Atribuição salva', 'O trabalho foi atribuído, mas o e-mail de notificação não pôde ser enviado.');
+    }
   } catch (erro) { mostrarModalSite('Ocorreu um erro', erro.message); }
 }
 
