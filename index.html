@@ -286,6 +286,20 @@
   .atribuicao-item.conflito-autoria strong { color:#8b1e2d; }
   .atribuicao-item .meta { font-size:12px; color:var(--fpbf-muted); margin-top:3px; }
   .atribuicao-item input[type="checkbox"] { width:17px; height:17px; }
+
+  .distribuicao-uniforme-box{display:none;margin:18px 0 8px;padding:18px;border:1px solid var(--fpbf-border);border-radius:14px;background:#fbfaf8}
+  .distribuicao-uniforme-box.ativo{display:block}
+  .distribuicao-uniforme-topo{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+  .distribuicao-uniforme-topo h3{margin:0 0 4px;color:var(--fpbf-primary);font-size:18px}
+  .distribuicao-uniforme-resumo{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}
+  .distribuicao-carga{padding:9px 11px;border:1px solid var(--fpbf-border);border-radius:10px;background:#fff;font-size:12px;line-height:1.35}
+  .distribuicao-carga strong{display:block;color:var(--fpbf-primary);font-size:13px;margin-bottom:2px}
+  .distribuicao-linhas{display:grid;gap:8px}
+  .distribuicao-linha{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,300px);gap:12px;align-items:center;padding:12px 14px;background:#fff;border:1px solid var(--fpbf-border);border-radius:10px}
+  .distribuicao-linha.sem-opcao{background:#fff1f2;border-color:#e5a3aa}
+  .distribuicao-linha select{width:100%;padding:9px 10px;border:1px solid var(--fpbf-border);border-radius:8px;background:#fff}
+  .distribuicao-acoes{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--fpbf-border)}
+  @media(max-width:760px){.distribuicao-linha{grid-template-columns:1fr}.distribuicao-uniforme-box{padding:14px}}
   .alerta-conflito { font-size:11.5px; color:#8b1e2d; font-weight:700; text-align:right; max-width:220px; }
   .contador-selecao { font-size:12.5px; color:var(--fpbf-muted); margin-left:auto; }
 
@@ -1149,9 +1163,11 @@
             <select id="atrib-lote-avaliador" onchange="renderizarListaAtribuicoesPorAvaliador()" disabled><option value="">Selecione o eixo primeiro...</option></select>
             <button type="button" class="btn btn-secundario" style="width:auto;" onclick="selecionarTodosLivres()">Selecionar livres</button>
             <button type="button" class="btn btn-primary" style="width:auto;" id="btn-atribuir-lote" onclick="atribuirSelecionadosUI()">Atribuir selecionados</button>
+            <button type="button" class="btn btn-secundario" style="width:auto;" id="btn-distribuir-uniforme" onclick="gerarDistribuicaoUniformeUI()">Distribuir uniformemente</button>
             <span class="contador-selecao" id="contador-atribuicoes">0 selecionados</span>
           </div>
           <div id="resumo-avaliador-atribuicoes" class="atribuicoes-resumo"></div>
+          <div id="distribuicao-uniforme-preview" class="distribuicao-uniforme-box"></div>
           <div id="lista-atribuicoes" class="atribuicoes-lista"></div>
         </div>
       </section>
@@ -1299,7 +1315,7 @@
 // =============================================================
 
 // Cole aqui a URL do deploy (.../exec) do Code_Admin.gs
-const API_URL = 'https://script.google.com/macros/s/AKfycbx8bvr2ErxN_0rBd4OAFk6E5Z1zEZD-hToyHPP5_q4cfoDFBinl5YDiuGmAa4YxEPs/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwZ6JibLPP-1fZHT5-tnQbZSVrW8yBk91_R0S3C-x9GCrSjAxKbutrNW_h2XJdBBjDB/exec';
 
 const CHAVE_SESSAO = 'fpbf_avalia_sessao';
 const CHAVE_CACHE = 'fpbf_avalia_cache_v3';
@@ -2060,6 +2076,7 @@ function renderizarAtribuicoes() {
 }
 
 function atualizarFiltroAvaliadoresPorEixo(preservarSelecao) {
+  fecharDistribuicaoUniformeUI();
   const eixoSel = document.getElementById('atrib-lote-eixo');
   const sel = document.getElementById('atrib-lote-avaliador');
   const lista = document.getElementById('lista-atribuicoes');
@@ -2130,6 +2147,179 @@ function renderizarListaAtribuicoesPorAvaliador() {
     </label>`;
   }).join('') || '<div class="estado-vazio">Nenhum trabalho encontrado neste eixo.</div>';
   atualizarContadorAtribuicoes();
+}
+
+
+function obterCargaAvaliadorNoEixoUI(email, eixo) {
+  email = String(email || '').trim().toLowerCase();
+  eixo = String(eixo || '').trim();
+  let n = 0;
+  (STATE.submissoesCache || []).forEach(s => {
+    if (String(s.eixo || '').trim() !== eixo) return;
+    (s.atribuicoesResumo || []).forEach(a => {
+      if (String(a.email || '').trim().toLowerCase() === email) n++;
+    });
+  });
+  return n;
+}
+
+function fecharDistribuicaoUniformeUI() {
+  const box = document.getElementById('distribuicao-uniforme-preview');
+  if (!box) return;
+  box.classList.remove('ativo');
+  box.innerHTML = '';
+}
+
+function avaliadoresElegiveisParaTrabalhoUI(avaliadores, trabalho) {
+  return (avaliadores || []).filter(a => !avaliadorConflitaComSubmissaoUI(a, trabalho));
+}
+
+function gerarDistribuicaoUniformeUI() {
+  const eixo = String((document.getElementById('atrib-lote-eixo') || {}).value || '').trim();
+  if (!eixo) return mostrarModalSite('Selecione o eixo', 'Escolha primeiro o eixo que será distribuído.');
+
+  const avaliadores = (STATE.avaliadoresCache || []).filter(u => u.papel === 'Avaliador' && u.ativo && avaliadorPodeNoEixoUI(u, eixo));
+  if (!avaliadores.length) return mostrarModalSite('Sem avaliadores(as)', 'Não há avaliadores(as) ativos(as) cadastrados(as) neste eixo.');
+
+  // A distribuição automática trabalha somente com trabalhos ainda sem nenhuma atribuição.
+  // Assim, novas rodadas equilibram apenas o que chegou depois, levando em conta a carga já existente.
+  const trabalhos = (STATE.submissoesCache || [])
+    .filter(s => String(s.eixo || '').trim() === eixo && !(s.atribuidoPara && s.atribuidoPara.length))
+    .slice()
+    .sort((a,b) => String(a.codigo || '').localeCompare(String(b.codigo || ''), 'pt-BR', {numeric:true}));
+
+  if (!trabalhos.length) return mostrarModalSite('Nada para distribuir', 'Todos os trabalhos deste eixo já possuem atribuição.');
+
+  const cargaEixo = {};
+  const cargaTotal = {};
+  const propostaExtra = {};
+  avaliadores.forEach(a => {
+    const email = String(a.email || '').trim().toLowerCase();
+    cargaEixo[email] = obterCargaAvaliadorNoEixoUI(email, eixo);
+    cargaTotal[email] = obterEstatisticasAvaliadorUI(email).atribuidos;
+    propostaExtra[email] = 0;
+  });
+
+  const proposta = trabalhos.map(trabalho => {
+    const candidatos = avaliadoresElegiveisParaTrabalhoUI(avaliadores, trabalho).slice();
+    candidatos.sort((a,b) => {
+      const ea = String(a.email || '').trim().toLowerCase();
+      const eb = String(b.email || '').trim().toLowerCase();
+      const ca = (cargaEixo[ea] || 0) + (propostaExtra[ea] || 0);
+      const cb = (cargaEixo[eb] || 0) + (propostaExtra[eb] || 0);
+      if (ca !== cb) return ca - cb;
+      if ((cargaTotal[ea] || 0) !== (cargaTotal[eb] || 0)) return (cargaTotal[ea] || 0) - (cargaTotal[eb] || 0);
+      return String(a.nome || '').localeCompare(String(b.nome || ''), 'pt-BR');
+    });
+    const escolhido = candidatos[0] || null;
+    if (escolhido) propostaExtra[String(escolhido.email || '').trim().toLowerCase()]++;
+    return { trabalho, avaliadorEmail: escolhido ? String(escolhido.email || '').trim().toLowerCase() : '' };
+  });
+
+  renderizarPreviewDistribuicaoUniformeUI(eixo, avaliadores, proposta, cargaEixo);
+}
+
+function renderizarPreviewDistribuicaoUniformeUI(eixo, avaliadores, proposta, cargaEixo) {
+  const box = document.getElementById('distribuicao-uniforme-preview');
+  if (!box) return;
+  box.dataset.eixo = eixo;
+  box._avaliadores = avaliadores;
+  box._proposta = proposta;
+  box._cargaEixo = cargaEixo;
+
+  const linhas = proposta.map((p, idx) => {
+    const elegiveis = avaliadoresElegiveisParaTrabalhoUI(avaliadores, p.trabalho);
+    const opcoes = elegiveis.map(a => {
+      const email = String(a.email || '').trim().toLowerCase();
+      const sel = email === p.avaliadorEmail ? ' selected' : '';
+      return `<option value="${escapeHtml(email)}"${sel}>${escapeHtml(a.nome)} — ${cargaEixo[email] || 0} atual(is) no eixo</option>`;
+    }).join('');
+    const sem = !elegiveis.length;
+    return `<div class="distribuicao-linha ${sem ? 'sem-opcao' : ''}">
+      <div><strong>${escapeHtml(p.trabalho.codigo)} — ${escapeHtml(p.trabalho.titulo)}</strong><div class="meta">${escapeHtml(p.trabalho.modalidade)} · ${escapeHtml(p.trabalho.status)} · Autores: ${escapeHtml((p.trabalho.autores || []).join('; '))}</div>${sem ? '<div class="alerta-conflito" style="margin-top:6px;">⚠ Nenhum(a) avaliador(a) disponível sem conflito de autoria.</div>' : ''}</div>
+      <select class="select-distribuicao-uniforme" data-index="${idx}" onchange="atualizarPreviewDistribuicaoUniformeUI()" ${sem ? 'disabled' : ''}>
+        ${sem ? '<option value="">Sem avaliador(a) disponível</option>' : opcoes}
+      </select>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="distribuicao-uniforme-topo">
+      <div><h3>Prévia da distribuição uniforme</h3><div style="font-size:13px;color:var(--fpbf-muted);max-width:760px;line-height:1.55;">Nada será atribuído ainda. O sistema considera a carga que cada avaliador(a) já possui neste eixo e distribui apenas os trabalhos ainda livres. Você pode alterar qualquer avaliador(a) abaixo antes de confirmar.</div></div>
+      <button type="button" class="btn btn-secundario" style="width:auto;" onclick="fecharDistribuicaoUniformeUI()">Fechar prévia</button>
+    </div>
+    <div id="resumo-distribuicao-uniforme" class="distribuicao-uniforme-resumo"></div>
+    <div class="distribuicao-linhas">${linhas}</div>
+    <div class="distribuicao-acoes">
+      <button type="button" class="btn btn-secundario" style="width:auto;" onclick="gerarDistribuicaoUniformeUI()">Refazer distribuição</button>
+      <button type="button" class="btn btn-primary" style="width:auto;" onclick="confirmarDistribuicaoUniformeUI()">Confirmar e atribuir</button>
+    </div>`;
+  box.classList.add('ativo');
+  atualizarPreviewDistribuicaoUniformeUI();
+  box.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function atualizarPreviewDistribuicaoUniformeUI() {
+  const box = document.getElementById('distribuicao-uniforme-preview');
+  if (!box || !box.classList.contains('ativo')) return;
+  const avaliadores = box._avaliadores || [];
+  const cargaEixo = box._cargaEixo || {};
+  const novos = {};
+  avaliadores.forEach(a => novos[String(a.email || '').trim().toLowerCase()] = 0);
+  box.querySelectorAll('.select-distribuicao-uniforme').forEach(sel => {
+    const email = String(sel.value || '').trim().toLowerCase();
+    if (email) novos[email] = (novos[email] || 0) + 1;
+  });
+  const resumo = document.getElementById('resumo-distribuicao-uniforme');
+  if (!resumo) return;
+  resumo.innerHTML = avaliadores.map(a => {
+    const email = String(a.email || '').trim().toLowerCase();
+    const atual = cargaEixo[email] || 0;
+    const add = novos[email] || 0;
+    return `<div class="distribuicao-carga"><strong>${escapeHtml(a.nome)}</strong>${atual} atual(is) + ${add} novo(s) → <b>${atual + add}</b> no eixo</div>`;
+  }).join('');
+}
+
+async function confirmarDistribuicaoUniformeUI() {
+  const box = document.getElementById('distribuicao-uniforme-preview');
+  if (!box || !box.classList.contains('ativo')) return;
+  const proposta = box._proposta || [];
+  const itens = [];
+  let semAvaliador = 0;
+  box.querySelectorAll('.select-distribuicao-uniforme').forEach(sel => {
+    const idx = Number(sel.dataset.index);
+    const p = proposta[idx];
+    if (!p) return;
+    const email = String(sel.value || '').trim().toLowerCase();
+    if (!email) { semAvaliador++; return; }
+    itens.push({ eixo: String(p.trabalho.eixo || ''), codigo: String(p.trabalho.codigo || ''), avaliadorEmail: email });
+  });
+  if (semAvaliador) return mostrarModalSite('Revise a distribuição', `${semAvaliador} trabalho${semAvaliador === 1 ? '' : 's'} não possui${semAvaliador === 1 ? '' : 'em'} avaliador(a) disponível sem conflito de autoria.`);
+  if (!itens.length) return mostrarModalSite('Nada para atribuir', 'A prévia não possui trabalhos válidos para atribuição.');
+
+  const emails = [...new Set(itens.map(i => i.avaliadorEmail))];
+  const ok = await confirmarModalSite('Confirmar distribuição?', `Serão atribuídos ${itens.length} trabalho${itens.length === 1 ? '' : 's'} entre ${emails.length} avaliador${emails.length === 1 ? '(a)' : 'es(as)'}. Esta é a última confirmação; a prévia pode ser alterada antes deste passo.`);
+  if (!ok) return;
+
+  try {
+    const r = await chamar('atribuirDistribuicaoPlanejada', { itens });
+    if (!r || !r.sucesso) throw new Error((r && r.erro) || 'Não foi possível concluir a distribuição.');
+    invalidarCacheDados();
+    await carregarSubmissoes();
+    await sincronizarFluxoAvaliacao();
+    fecharDistribuicaoUniformeUI();
+    renderizarAtribuicoes();
+    const ignorados = (r.ignorados || []).length;
+    const conflitos = (r.conflitosAutoria || []).length;
+    const falhasEmail = (r.falhasEmail || []).length;
+    let msg = `${r.atribuidos || 0} trabalho${r.atribuidos === 1 ? '' : 's'} distribuído${r.atribuidos === 1 ? '' : 's'} com sucesso entre ${r.avaliadoresNotificados || 0} avaliador${r.avaliadoresNotificados === 1 ? '(a)' : 'es(as)'}.`;
+    if (ignorados) msg += ` ${ignorados} item(ns) foi(ram) ignorado(s) porque a situação mudou ou já havia atribuição.`;
+    if (conflitos) msg += ` ${conflitos} item(ns) foi(ram) bloqueado(s) por conflito de autoria.`;
+    if (falhasEmail) msg += ` Houve falha no envio de ${falhasEmail} notificação(ões) por e-mail, mas as atribuições correspondentes foram salvas.`;
+    mostrarModalSite('Distribuição concluída', msg);
+  } catch (e) {
+    mostrarModalSite('Erro na distribuição', e.message);
+  }
 }
 
 function atualizarContadorAtribuicoes() {
